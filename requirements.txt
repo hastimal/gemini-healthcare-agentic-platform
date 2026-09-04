@@ -1,0 +1,16 @@
+google-genai
+google-adk
+
+pydantic
+pydantic-settings
+python-dotenv
+
+fastapi
+uvicorn
+
+httpx
+requests
+beautifulsoup4
+
+tenacity
+structlog

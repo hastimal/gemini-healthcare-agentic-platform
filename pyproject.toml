@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gemini-healthcare-agentic-platform"
+version = "0.1.0"
+description = "Beyond RAG: A Gemini-powered agentic healthcare information search and evaluation platform."
+readme = "README.md"
+requires-python = ">=3.11"
+
+authors = [
+    { name = "Hastimal Jangid" }
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_configs = true
