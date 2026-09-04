@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     gemma_model: str | None = None
 
+    ncbi_email: str | None = None
+    ncbi_api_key: str | None = None
+
     api_host: str = "0.0.0.0"
     api_port: int = 8000
 

@@ -8,16 +8,10 @@ class GeminiClient:
         settings = get_settings()
 
         if not settings.gemini_api_key:
-            raise ValueError(
-                "GEMINI_API_KEY is not configured. "
-                "Add it to your local .env file."
-            )
+            raise ValueError("GEMINI_API_KEY is not configured. Add it to your local .env file.")
 
         if not settings.gemini_model:
-            raise ValueError(
-                "GEMINI_MODEL is not configured. "
-                "Add it to your local .env file."
-            )
+            raise ValueError("GEMINI_MODEL is not configured. Add it to your local .env file.")
 
         self.model = settings.gemini_model
 

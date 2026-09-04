@@ -5,12 +5,7 @@ from google.genai import types
 from llm.gemini.client import GeminiClient
 from models import SearchPlan, UserQuery
 
-PROMPT_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "agents"
-    / "prompts"
-    / "query_agent.md"
-)
+PROMPT_PATH = Path(__file__).resolve().parent.parent / "agents" / "prompts" / "query_agent.md"
 
 
 def load_planner_prompt() -> str:
