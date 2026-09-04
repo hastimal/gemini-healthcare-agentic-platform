@@ -29,3 +29,30 @@ python_version = "3.11"
 ignore_missing_imports = true
 warn_return_any = true
 warn_unused_configs = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "app*",
+    "agents*",
+    "search*",
+    "grounding*",
+    "connectors*",
+    "mcp_services*",
+    "models*",
+    "llm*",
+    "evaluation*",
+    "security*",
+    "observability*",
+]
+exclude = [
+    "tests*",
+    "examples*",
+    "notebooks*",
+    "docs*",
+    "deployment*",
+    "monitoring*",
+    "benchmark*",
+    "data*",
+    "scripts*",
+]
