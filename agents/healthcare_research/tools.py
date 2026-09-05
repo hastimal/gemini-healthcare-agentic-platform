@@ -1,8 +1,8 @@
 """
 Tools used by the Google ADK Healthcare Research Agent.
 
-This module adapts ADK to the already-tested v0.2-v0.4 healthcare
-retrieval pipeline.
+v0.6 routes healthcare retrieval through MCP using an asynchronous
+retrieval path compatible with Google ADK's asyncio execution model.
 
 Structured dictionaries are passed between agents instead of
 JSON-encoded strings to avoid nested JSON escaping problems.
@@ -10,36 +10,41 @@ JSON-encoded strings to avoid nested JSON escaping problems.
 
 from typing import Any
 
-from connectors.provider_search.client import NPPESProviderClient
-from connectors.pubmed.client import PubMedClient
 from models import SearchPlan, UserQuery
-from search.retrieval import HealthcareRetrievalOrchestrator
+from search.mcp_retrieval import MCPHealthcareRetrievalOrchestrator
 
 
-def retrieve_healthcare_evidence(
+async def retrieve_healthcare_evidence(
     user_query: dict[str, Any],
     search_plan: dict[str, Any],
 ) -> dict:
     """
-    Retrieve provider and biomedical evidence for a validated search plan.
+    Retrieve provider and biomedical evidence through MCP.
 
-    Args:
-        user_query: Structured UserQuery data.
-        search_plan: Structured SearchPlan data.
+    Flow:
 
-    Returns:
-        Structured SearchResult records and transparency counts.
+        Google ADK
+            |
+            v
+        Healthcare Research Agent
+            |
+            v
+        MCPHealthcareRetrievalOrchestrator
+            |
+            +--> Search MCP Server --> NPPES
+            |
+            +--> Research MCP Server --> PubMed
+
+    The returned structure remains compatible with the v0.5 agent
+    handoff contract.
     """
 
     validated_user_query = UserQuery.model_validate(user_query)
     validated_plan = SearchPlan.model_validate(search_plan)
 
-    orchestrator = HealthcareRetrievalOrchestrator(
-        provider_client=NPPESProviderClient(),
-        pubmed_client=PubMedClient(),
-    )
+    orchestrator = MCPHealthcareRetrievalOrchestrator()
 
-    results = orchestrator.retrieve(
+    results = await orchestrator.retrieve(
         user_query=validated_user_query,
         plan=validated_plan,
         city="Houston",
