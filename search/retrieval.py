@@ -2,38 +2,69 @@ from __future__ import annotations
 
 from connectors.provider_search.client import NPPESProviderClient
 from connectors.pubmed.client import PubMedClient
-from models import SearchPlan, SearchResult, UserQuery
+from models import (
+    SearchIntent,
+    SearchPlan,
+    SearchQuery,
+    SearchResult,
+    UserQuery,
+)
 from search.deduplication import deduplicate_results
 
 
 class HealthcareRetrievalOrchestrator:
     """
-    Coordinate retrieval across healthcare evidence sources.
+    Coordinate retrieval across healthcare data sources.
 
-    Current v0.2 retrieval sources:
+    v0.2 introduced real NPPES and PubMed retrieval.
 
-    1. NPPES
-       Used for structured healthcare-provider discovery.
+    v0.3 improves evidence-aware routing so a provider-discovery
+    question can retrieve BOTH:
 
-    2. PubMed
-       Used for scientific and clinical literature.
+        1. provider evidence
+        2. biomedical/scientific evidence
 
-    Architecture principle:
+    This remains deterministic routing.
 
-        UserQuery
-            -> Gemini SearchPlan
-            -> Retrieval Orchestrator
-            -> Real external sources
-            -> SearchResult[]
-            -> Deduplication
-            -> Evidence Pool
-
-    Gemini plans the research.
-
-    Retrieval tools supply the facts.
-
-    Gemini should NOT invent providers or scientific evidence.
+    Google ADK will later move more retrieval decisions into the
+    Healthcare Research Agent.
     """
+
+    RESEARCH_KEYWORDS = {
+        "anxiety",
+        "anxious",
+        "behavior",
+        "behaviour",
+        "behavioral",
+        "behavioural",
+        "clinical",
+        "evidence",
+        "fear",
+        "guideline",
+        "intervention",
+        "literature",
+        "outcome",
+        "outcomes",
+        "research",
+        "review",
+        "sedation",
+        "study",
+        "systematic",
+        "treatment",
+    }
+
+    RESEARCH_PURPOSE_PHRASES = {
+        "scientific evidence",
+        "clinical evidence",
+        "biomedical evidence",
+        "research evidence",
+        "systematic review",
+        "clinical research",
+        "behavior management",
+        "behaviour management",
+        "sedation evidence",
+        "anxiety evidence",
+    }
 
     def __init__(
         self,
@@ -41,10 +72,9 @@ class HealthcareRetrievalOrchestrator:
         pubmed_client: PubMedClient | None = None,
     ) -> None:
         """
-        Allow retrieval clients to be injected.
+        Allow dependency injection so unit tests can use fake clients.
 
-        This lets production code use real NPPES/PubMed clients while
-        unit tests can use fake clients without making network calls.
+        Production code defaults to the real NPPES and PubMed clients.
         """
 
         self.provider_client = provider_client or NPPESProviderClient()
@@ -61,28 +91,27 @@ class HealthcareRetrievalOrchestrator:
         pubmed_limit: int = 5,
     ) -> list[SearchResult]:
         """
-        Execute retrieval for a Gemini-generated SearchPlan.
+        Execute retrieval for a healthcare search plan.
 
-        The original UserQuery is passed alongside SearchPlan because
-        it contains structured user constraints such as specialty.
+        Current v0.3 behavior:
 
-        Example:
+        Provider discovery:
+            -> NPPES retrieves provider candidates using the
+               structured specialty from UserQuery.
 
-            user_query.specialty = "Pediatric Dentistry"
+        Scientific/research queries:
+            -> PubMed retrieves biomedical literature for each
+               evidence-oriented search query.
 
-        That value is passed dynamically to NPPES.
+        Results are combined and deduplicated before being returned.
 
-        IMPORTANT:
-        The retrieval orchestrator does NOT hard-code a healthcare
-        specialty. This makes the architecture reusable for future
-        searches such as cardiology, dermatology, etc.
+        NOTE:
 
-        City and state remain explicit parameters for v0.2 because the
-        current UserQuery stores location as a display string such as
+        city/state remain explicit parameters for now because
+        UserQuery.location is currently a display string such as
         "Houston, TX".
 
-        We will introduce structured location modeling separately
-        instead of attempting fragile string parsing here.
+        We intentionally avoid fragile location-string parsing.
         """
 
         results: list[SearchResult] = []
@@ -91,20 +120,20 @@ class HealthcareRetrievalOrchestrator:
         # PROVIDER DISCOVERY
         # ---------------------------------------------------------
         #
-        # Provider discovery is performed when Gemini classified the
-        # user's request as provider_discovery.
+        # NPPES retrieval is driven by structured query fields rather
+        # than every generated Gemini query.
         #
-        # Specialty comes from UserQuery rather than being hard-coded
-        # inside this orchestrator.
-        if plan.intent.value == "provider_discovery":
+        # This prevents us from repeatedly calling NPPES with five
+        # variations of essentially the same specialty/location query.
+        #
+        if (
+            user_query.intent == SearchIntent.PROVIDER_DISCOVERY
+            or plan.intent == SearchIntent.PROVIDER_DISCOVERY
+        ):
             specialty = user_query.specialty
 
-            # Provider discovery requires a specialty.
-            #
-            # We intentionally fail clearly instead of silently
-            # searching for an arbitrary provider type.
             if not specialty:
-                raise ValueError("Provider discovery requires user_query.specialty.")
+                raise ValueError("Provider discovery requires UserQuery.specialty.")
 
             provider_results = self.provider_client.search(
                 taxonomy_description=specialty,
@@ -119,32 +148,26 @@ class HealthcareRetrievalOrchestrator:
         # SCIENTIFIC EVIDENCE RETRIEVAL
         # ---------------------------------------------------------
         #
-        # Not every Gemini-generated query should go to PubMed.
+        # SearchPlan queries whose query text OR purpose indicate
+        # scientific/clinical research are routed to PubMed.
+        #
+        # This is intentionally deterministic and explainable.
         #
         # Example:
         #
-        #     "pediatric dentists Houston TX"
+        #   pediatric dental anxiety behavior management
+        #   systematic review
         #
-        # belongs primarily to provider discovery.
+        # should go to PubMed, while:
         #
-        # But:
+        #   pediatric dentists Houston TX
         #
-        #     "pediatric dental anxiety behavior management"
+        # should not.
         #
-        # is appropriate for PubMed.
-        #
-        # For v0.2 we use transparent keyword routing.
-        # Later, ADK agents will make richer tool-use decisions.
-        research_queries = [
-            search_query
-            for search_query in plan.generated_queries
-            if self._is_research_query(
-                query=search_query.query,
-                purpose=search_query.purpose,
-            )
-        ]
+        for search_query in plan.generated_queries:
+            if not self._is_research_query(search_query):
+                continue
 
-        for search_query in research_queries:
             pubmed_results = self.pubmed_client.search(
                 query=search_query.query,
                 max_results=pubmed_limit,
@@ -156,41 +179,54 @@ class HealthcareRetrievalOrchestrator:
         # DEDUPLICATION
         # ---------------------------------------------------------
         #
-        # Multiple fan-out queries can retrieve the same PubMed
-        # article or provider.
+        # Multiple scientific queries may retrieve the same PMID.
         #
-        # Deduplicate before evidence ranking so repeated retrieval
-        # does not artificially increase a source's importance.
+        # Removing duplicates is important because duplicate evidence
+        # must not artificially increase its importance in later
+        # evidence ranking.
+        #
         return deduplicate_results(results)
 
-    @staticmethod
+    @classmethod
     def _is_research_query(
-        query: str,
-        purpose: str,
+        cls,
+        search_query: SearchQuery,
     ) -> bool:
         """
-        Decide whether a fan-out query belongs in PubMed.
+        Decide whether a generated query belongs in PubMed.
 
-        This is intentionally transparent and simple for v0.2.
+        We examine BOTH:
 
-        Later, the Healthcare Research Agent built with Google ADK
-        will decide which MCP/retrieval tools should handle a query.
+            search_query.query
+            search_query.purpose
+
+        Purpose-aware routing is important because Gemini may generate
+        a scientifically valid query without using one exact keyword
+        we happened to anticipate.
+
+        This remains a lightweight baseline.
+
+        Later, Google ADK will allow the Healthcare Research Agent to
+        choose tools dynamically.
         """
 
-        text = f"{query} {purpose}".lower()
+        query_text = search_query.query.lower()
+        purpose_text = search_query.purpose.lower()
 
-        research_keywords = {
-            "anxiety",
-            "behavior",
-            "behaviour",
-            "sedation",
-            "evidence",
-            "study",
-            "research",
-            "clinical",
-            "systematic review",
-            "fear",
-            "guideline",
-        }
+        # Strong signal:
+        # the planner explicitly says this query exists to retrieve
+        # scientific or clinical evidence.
+        if any(phrase in purpose_text for phrase in cls.RESEARCH_PURPOSE_PHRASES):
+            return True
 
-        return any(keyword in text for keyword in research_keywords)
+        # Secondary signal:
+        # biomedical/research terminology appears in either the query
+        # itself or its stated purpose.
+        combined_text = f"{query_text} {purpose_text}"
+
+        words = set(combined_text.replace("/", " ").replace("-", " ").split())
+
+        if words.intersection(cls.RESEARCH_KEYWORDS):
+            return True
+
+        return False

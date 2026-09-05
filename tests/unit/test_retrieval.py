@@ -6,42 +6,50 @@ from models import (
     SourceType,
     UserQuery,
 )
-from search.retrieval import HealthcareRetrievalOrchestrator
+from search.retrieval import (
+    HealthcareRetrievalOrchestrator,
+)
 
 
 class FakeProviderClient:
     """
-    Fake NPPES client used only for unit testing.
-
-    Unit tests should not depend on external APIs or network access.
+    Fake NPPES client used to test orchestration without making
+    network calls.
     """
+
+    def __init__(self) -> None:
+        self.last_taxonomy: str | None = None
+        self.last_city: str | None = None
+        self.last_state: str | None = None
 
     def search(
         self,
         taxonomy_description: str,
         city: str,
         state: str,
-        limit: int,
+        limit: int = 10,
     ) -> list[SearchResult]:
-        # Confirm that specialty flows dynamically from UserQuery.
-        #
-        # The retrieval orchestrator should NOT hard-code
-        # "Pediatric Dentistry".
-        assert taxonomy_description == "Pediatric Dentistry"
+        """
+        Record arguments so we can verify that the orchestrator passes
+        the specialty dynamically from UserQuery.
+        """
+
+        self.last_taxonomy = taxonomy_description
+        self.last_city = city
+        self.last_state = state
 
         return [
             SearchResult(
                 source_type=SourceType.PROVIDER,
                 title="Example Pediatric Dentist",
                 url=("https://npiregistry.cms.hhs.gov/provider-view/1234567890"),
-                provider_name="Example Pediatric Dentist",
+                provider_name=("Example Pediatric Dentist"),
                 location="Houston, TX",
                 retrieved_by="nppes",
                 query_used=taxonomy_description,
                 metadata={
                     "npi": "1234567890",
-                    "city": city,
-                    "state": state,
+                    "taxonomy": taxonomy_description,
                 },
             )
         ]
@@ -49,140 +57,183 @@ class FakeProviderClient:
 
 class FakePubMedClient:
     """
-    Fake PubMed client used only for unit testing.
+    Fake PubMed client.
 
-    We intentionally return the SAME PMID for every research query.
+    Every research query intentionally returns the SAME PMID.
 
-    This verifies that our deduplication layer removes duplicate
-    scientific evidence before it reaches the evidence pool.
+    This lets the test confirm that deduplication prevents duplicate
+    scientific evidence from appearing multiple times.
     """
+
+    def __init__(self) -> None:
+        self.queries: list[str] = []
 
     def search(
         self,
         query: str,
-        max_results: int,
+        max_results: int = 5,
     ) -> list[SearchResult]:
+        """
+        Record routed PubMed queries and return deterministic evidence.
+        """
+
+        self.queries.append(query)
+
         return [
             SearchResult(
                 source_type=SourceType.PUBMED,
-                title="Pediatric Dental Anxiety Study",
+                title=("Behavior management for pediatric dental anxiety"),
                 url=("https://pubmed.ncbi.nlm.nih.gov/12345678/"),
-                snippet="Example research evidence.",
-                content="Example research evidence.",
+                snippet=("Evidence about pediatric dental anxiety and behavior management."),
+                content=("Evidence about pediatric dental anxiety and behavior management."),
                 retrieved_by="pubmed",
                 query_used=query,
                 metadata={
                     "pmid": "12345678",
+                    "publication_date": "2025",
                 },
             )
         ]
 
 
-def test_retrieval_orchestrator():
+def _user_query() -> UserQuery:
     """
-    Validate the complete v0.2 retrieval path:
-
-        UserQuery
-            -> SearchPlan
-            -> NPPES
-            -> PubMed
-            -> combine
-            -> deduplicate
-
-    Two research queries deliberately retrieve the same PMID.
-
-    Expected final evidence:
-
-        1 provider
-        1 unique PubMed article
-
-    Total = 2 unique SearchResult objects.
+    Shared provider-discovery query.
     """
 
-    user_query = UserQuery(
-        text=("Find pediatric dentists in Houston for a child with dental anxiety."),
+    return UserQuery(
+        text=("Find pediatric dentists in Houston for a child who is anxious about dental visits."),
         location="Houston, TX",
         specialty="Pediatric Dentistry",
+        intent=SearchIntent.PROVIDER_DISCOVERY,
     )
 
-    plan = SearchPlan(
-        # IMPORTANT:
-        # SearchPlan.original_query expects the complete UserQuery model,
-        # NOT user_query.text.
-        #
-        # This preserves structured fields such as:
-        # - location
-        # - specialty
-        # - intent
+
+def _search_plan() -> SearchPlan:
+    """
+    Build a mixed evidence-aware search plan.
+
+    The plan deliberately contains:
+    - provider discovery
+    - scientific evidence
+    - second scientific evidence query
+
+    This models the behavior we now expect from Gemini.
+    """
+
+    user_query = _user_query()
+
+    return SearchPlan(
         original_query=user_query,
         intent=SearchIntent.PROVIDER_DISCOVERY,
         generated_queries=[
             SearchQuery(
-                query=("pediatric dental anxiety behavior management"),
-                purpose=("Find evidence for managing dental anxiety in children"),
+                query=("pediatric dentists Houston TX"),
+                purpose="provider discovery",
                 priority=1,
             ),
             SearchQuery(
-                query=("pediatric dentistry sedation anxious children"),
-                purpose=("Find research about sedation and anxiety management"),
+                query=("pediatric dental anxiety behavior management systematic review"),
+                purpose=("scientific evidence for pediatric dental anxiety"),
+                priority=1,
+            ),
+            SearchQuery(
+                query=("pediatric dentistry anxious children sedation evidence"),
+                purpose=("scientific evidence for sedation approaches"),
                 priority=2,
             ),
         ],
-        notes="Unit-test search plan",
     )
 
+
+def test_retrieval_orchestrator():
+    """
+    Validate the complete deterministic routing behavior.
+
+    Expected final results:
+
+        1 provider result
+        1 unique PubMed result
+
+    Even though TWO research queries are sent to PubMed, our fake
+    PubMed client returns the same PMID for both.
+
+    Deduplication should collapse those duplicates.
+    """
+
+    provider_client = FakeProviderClient()
+    pubmed_client = FakePubMedClient()
+
     orchestrator = HealthcareRetrievalOrchestrator(
-        provider_client=FakeProviderClient(),
-        pubmed_client=FakePubMedClient(),
+        provider_client=provider_client,
+        pubmed_client=pubmed_client,
     )
 
     results = orchestrator.retrieve(
-        user_query=user_query,
-        plan=plan,
+        user_query=_user_query(),
+        plan=_search_plan(),
         city="Houston",
         state="TX",
+        provider_limit=10,
+        pubmed_limit=5,
     )
 
-    # FakePubMedClient returned the same PMID twice.
-    #
-    # Deduplication should leave:
-    #
-    # 1 provider
-    # 1 PubMed article
-    #
-    # Total = 2 unique results.
+    # Dynamic specialty must be preserved.
+    assert provider_client.last_taxonomy == "Pediatric Dentistry"
+
+    assert provider_client.last_city == "Houston"
+    assert provider_client.last_state == "TX"
+
+    # Only the two evidence-oriented queries should be routed
+    # to PubMed.
+    assert len(pubmed_client.queries) == 2
+
+    assert "pediatric dentists Houston TX" not in pubmed_client.queries
+
+    # Provider + one deduplicated PubMed article.
     assert len(results) == 2
 
-    provider_results = [result for result in results if result.source_type == SourceType.PROVIDER]
+    source_types = {result.source_type for result in results}
 
-    pubmed_results = [result for result in results if result.source_type == SourceType.PUBMED]
-
-    assert len(provider_results) == 1
-    assert len(pubmed_results) == 1
-
-    assert provider_results[0].metadata["npi"] == "1234567890"
-
-    assert pubmed_results[0].metadata["pmid"] == "12345678"
+    assert SourceType.PROVIDER in source_types
+    assert SourceType.PUBMED in source_types
 
 
 def test_research_query_routing():
     """
-    Verify our temporary v0.2 routing logic.
-
-    Research/evidence-oriented queries should be routed to PubMed.
-
-    Simple provider-location queries should NOT be routed to PubMed.
-
-    Later, Google ADK will replace this lightweight routing logic
-    with dynamic agent/tool selection.
+    Verify obvious scientific queries go to PubMed while a simple
+    location/provider query does not.
     """
 
-    assert HealthcareRetrievalOrchestrator._is_research_query(
-        query="pediatric dental anxiety behavior management",
-        purpose="Find clinical evidence",
+    scientific_query = SearchQuery(
+        query=("pediatric dental anxiety behavior management systematic review"),
+        purpose=("scientific evidence for pediatric dental anxiety"),
+        priority=1,
     )
 
-    assert not HealthcareRetrievalOrchestrator._is_research_query(
+    provider_query = SearchQuery(
         query="pediatric dentists Houston TX",
-        purpose="Find local pediatric dentists",
+        purpose="provider discovery",
+        priority=1,
     )
+
+    assert HealthcareRetrievalOrchestrator._is_research_query(scientific_query) is True
+
+    assert HealthcareRetrievalOrchestrator._is_research_query(provider_query) is False
+
+
+def test_research_routing_by_purpose():
+    """
+    The query itself may be concise, but an explicit scientific
+    evidence purpose should still route it to PubMed.
+
+    This makes routing less dependent on exact query wording.
+    """
+
+    query = SearchQuery(
+        query="pediatric dentistry anxious children",
+        purpose=("scientific evidence for behavior management"),
+        priority=2,
+    )
+
+    assert HealthcareRetrievalOrchestrator._is_research_query(query) is True
