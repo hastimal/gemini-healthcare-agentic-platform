@@ -177,6 +177,10 @@ class EvidenceScorer:
           verify that a provider is the best choice.
         - PubMed is authoritative as a biomedical literature index,
           while the strength of individual studies can still vary.
+        - FHIR defines a healthcare interoperability standard, but the
+          authority of an individual FHIR record depends on the system
+          that published it. v0.7 uses a public test server, so FHIR
+          records receive a conservative authority baseline.
         """
 
         authority_scores = {
@@ -184,7 +188,7 @@ class EvidenceScorer:
             SourceType.PROVIDER: 0.90,
             SourceType.CLINICAL_TRIAL: 0.92,
             SourceType.CMS: 0.95,
-            SourceType.FHIR: 0.90,
+            SourceType.FHIR: 0.65,
             SourceType.WEB: 0.60,
         }
 

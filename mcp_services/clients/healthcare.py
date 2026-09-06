@@ -16,6 +16,7 @@ from typing import Any
 
 from mcp import Client
 
+from mcp_services.fhir_server.server import mcp as fhir_mcp
 from mcp_services.research_server.server import mcp as research_mcp
 from mcp_services.search_server.server import mcp as search_mcp
 from models import SearchResult
@@ -89,6 +90,139 @@ class MCPPubMedClient:
             raise RuntimeError(
                 "Research MCP Server returned an error while retrieving "
                 "PubMed evidence."
+            )
+
+        return _extract_results(result)
+
+
+class MCPFHIRClient:
+    """
+    Async healthcare interoperability client backed by the FHIR MCP Server.
+
+    Initial v0.7 scope intentionally covers only non-patient healthcare
+    discovery resources:
+
+    - Practitioner
+    - PractitionerRole
+    - Organization
+    - Location
+    - HealthcareService
+    """
+
+    async def search_practitioners(
+        self,
+        name: str | None = None,
+        limit: int = 10,
+    ) -> list[SearchResult]:
+        async with Client(fhir_mcp) as client:
+            result = await client.call_tool(
+                "search_fhir_practitioners",
+                {
+                    "name": name,
+                    "limit": limit,
+                },
+            )
+
+        if result.is_error:
+            raise RuntimeError(
+                "FHIR MCP Server returned an error while retrieving "
+                "Practitioner resources."
+            )
+
+        return _extract_results(result)
+
+    async def search_practitioner_roles(
+        self,
+        specialty: str | None = None,
+        practitioner: str | None = None,
+        organization: str | None = None,
+        limit: int = 10,
+    ) -> list[SearchResult]:
+        async with Client(fhir_mcp) as client:
+            result = await client.call_tool(
+                "search_fhir_practitioner_roles",
+                {
+                    "specialty": specialty,
+                    "practitioner": practitioner,
+                    "organization": organization,
+                    "limit": limit,
+                },
+            )
+
+        if result.is_error:
+            raise RuntimeError(
+                "FHIR MCP Server returned an error while retrieving "
+                "PractitionerRole resources."
+            )
+
+        return _extract_results(result)
+
+    async def search_organizations(
+        self,
+        name: str | None = None,
+        limit: int = 10,
+    ) -> list[SearchResult]:
+        async with Client(fhir_mcp) as client:
+            result = await client.call_tool(
+                "search_fhir_organizations",
+                {
+                    "name": name,
+                    "limit": limit,
+                },
+            )
+
+        if result.is_error:
+            raise RuntimeError(
+                "FHIR MCP Server returned an error while retrieving "
+                "Organization resources."
+            )
+
+        return _extract_results(result)
+
+    async def search_locations(
+        self,
+        name: str | None = None,
+        city: str | None = None,
+        state: str | None = None,
+        limit: int = 10,
+    ) -> list[SearchResult]:
+        async with Client(fhir_mcp) as client:
+            result = await client.call_tool(
+                "search_fhir_locations",
+                {
+                    "name": name,
+                    "city": city,
+                    "state": state,
+                    "limit": limit,
+                },
+            )
+
+        if result.is_error:
+            raise RuntimeError(
+                "FHIR MCP Server returned an error while retrieving "
+                "Location resources."
+            )
+
+        return _extract_results(result)
+
+    async def search_healthcare_services(
+        self,
+        name: str | None = None,
+        limit: int = 10,
+    ) -> list[SearchResult]:
+        async with Client(fhir_mcp) as client:
+            result = await client.call_tool(
+                "search_fhir_healthcare_services",
+                {
+                    "name": name,
+                    "limit": limit,
+                },
+            )
+
+        if result.is_error:
+            raise RuntimeError(
+                "FHIR MCP Server returned an error while retrieving "
+                "HealthcareService resources."
             )
 
         return _extract_results(result)

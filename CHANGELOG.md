@@ -6,6 +6,184 @@ This project is developed incrementally. Each milestone introduces a capability 
 
 ---
 
+## [v0.7.0] - 2026-09-05
+
+### FHIR Healthcare Interoperability
+
+#### Why
+
+Provider registry evidence and biomedical literature represent different parts of the healthcare evidence landscape, but neither provides a standardized model for healthcare resource relationships.
+
+v0.7 introduces FHIR R4 as a third healthcare data capability so the platform can explore standardized relationships among practitioners, practitioner roles, organizations, locations, specialties, and healthcare services.
+
+FHIR is added as a tool and data-source capability. It does not introduce another core agent.
+
+#### Added
+
+- FHIR R4 connector
+- FHIR resource normalization into the shared `SearchResult` model
+- FHIR MCP server
+- Async FHIR MCP client
+- MCP-based FHIR retrieval through the Healthcare Research Agent
+- Explicit FHIR/interoperability query routing
+- Public HAPI FHIR R4 development endpoint configuration
+- Specialty-filtered `PractitionerRole` retrieval
+- Development-server fallback for interoperability-path validation
+- FHIR evidence scoring
+- Provider-discovery grounding safeguards for public HAPI test records
+- Defensive `SearchPlan` normalization at the Google ADK Research Agent tool boundary
+- FHIR connector, MCP, retrieval, client, and evidence-ranking regression tests
+- FHIR architecture and acceptance documentation
+
+#### Supported FHIR Resources
+
+The initial v0.7 scope supports:
+
+- `Practitioner`
+- `PractitionerRole`
+- `Organization`
+- `Location`
+- `HealthcareService`
+
+Patient-specific clinical resources are intentionally outside the initial v0.7 scope.
+
+#### FHIR MCP Tools
+
+The FHIR MCP server exposes:
+
+- `search_fhir_practitioners`
+- `search_fhir_practitioner_roles`
+- `search_fhir_organizations`
+- `search_fhir_locations`
+- `search_fhir_healthcare_services`
+
+#### Architecture Impact
+
+    Healthcare Research Agent
+              |
+              v
+    MCPHealthcareRetrievalOrchestrator
+         /          |          \
+        v           v           v
+    Search MCP  Research MCP  FHIR MCP
+        |           |           |
+        v           v           v
+      NPPES       PubMed      FHIR R4
+
+The three evidence paths remain intentionally distinct:
+
+    NPPES
+      -> provider registry evidence
+
+    PubMed
+      -> general biomedical evidence
+
+    FHIR
+      -> healthcare interoperability evidence
+
+#### FHIR Retrieval Behavior
+
+FHIR retrieval is intentionally opt-in.
+
+Ordinary provider and biomedical queries do not automatically trigger FHIR retrieval. A generated query must explicitly indicate FHIR or healthcare interoperability.
+
+For provider-oriented interoperability, v0.7 prefers `PractitionerRole`.
+
+The development workflow first attempts a specialty-filtered `PractitionerRole` lookup.
+
+The public HAPI FHIR test server may not contain records matching a free-text specialty. When that filtered lookup returns no records, the development path may perform an unfiltered `PractitionerRole` lookup.
+
+This fallback exists only to exercise the complete interoperability path:
+
+    Google ADK
+        -> Healthcare Research Agent
+        -> MCP retrieval
+        -> FHIR MCP server
+        -> FHIR connector
+        -> HAPI FHIR R4
+        -> normalized SearchResult
+
+The fallback must not be interpreted as specialty, location, credential, license, quality, service, or provider verification.
+
+#### Evidence Boundaries
+
+FHIR is used for healthcare interoperability evidence.
+
+Public HAPI FHIR test records are not treated as proof of:
+
+- provider quality
+- provider suitability
+- board certification
+- active licensure
+- good standing
+- requested specialty
+- requested location
+- provider recommendation
+- service availability
+
+The platform intentionally distinguishes:
+
+    FHIR standard authority
+              !=
+    individual FHIR record authority
+
+The authority of an individual FHIR record depends on its publisher and provenance.
+
+#### Grounding Impact
+
+FHIR evidence participates in retrieval, normalization, deduplication, and scoring.
+
+For provider-discovery workflows, public HAPI FHIR test records are prevented from consuming provider grounding slots.
+
+This allows the FHIR interoperability path to remain observable without treating arbitrary development-server records as provider recommendations.
+
+The grounding principle remains:
+
+**No evidence -> no claim.**
+
+#### Planner Safety
+
+The Search Planner may generate queries identifying professional directories or state licensing authorities that could support later verification.
+
+Generating those queries does not mean the corresponding source was retrieved or that credentials, licensing, disciplinary history, board certification, or services were verified.
+
+The planner prompt now explicitly distinguishes source discovery from completed verification.
+
+#### Google ADK Handoff
+
+During end-to-end validation, an LLM-mediated tool invocation omitted a redundant `SearchPlan.intent` field even though the planner output contained the intent.
+
+The Healthcare Research Agent tool boundary now defensively restores that field from the validated `UserQuery` before validating the `SearchPlan`.
+
+This keeps the handoff structured while avoiding a failure caused by omission of redundant planner state.
+
+#### Acceptance Validation
+
+One successful v0.7 end-to-end acceptance run produced:
+
+    Generated queries:       7
+    Retrieved sources:      19
+    Deduplicated sources:   19
+
+    NPPES:                  10
+    PubMed:                  6
+    FHIR:                    3
+
+    Selected evidence:       5
+    NPPES selected:           3
+    PubMed selected:          2
+    FHIR selected:            0
+
+These counts describe one observed acceptance run. They are not fixed architectural guarantees or benchmark claims.
+
+The pre-release regression checkpoint completed with:
+
+    45 passed
+
+One OpenTelemetry dependency deprecation warning remains visible during the test suite. It is non-blocking and is not treated as resolved by v0.7.
+
+---
+
 ## [v0.6.0] - 2026-09-05
 
 ### MCP Tool Layer
@@ -340,26 +518,6 @@ This separation is intentional. A provider registry should not be treated as sci
 ---
 
 # Planned Milestones
-
-## v0.7.0 - FHIR Healthcare Interoperability
-
-Planned focus:
-
-- FHIR connector
-- Standardized FHIR resource handling
-- FHIR MCP server
-- MCP-based FHIR tool access
-- Research Agent integration
-- Evidence normalization
-- Tests and end-to-end validation
-
-Initial resource scope is expected to focus on non-PHI healthcare discovery resources such as:
-
-- Practitioner
-- PractitionerRole
-- Organization
-- Location
-- HealthcareService
 
 ## v0.8.0 - Gemini + Gemma / Ollama
 

@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     ncbi_email: str | None = None
     ncbi_api_key: str | None = None
 
+    # Public/demo FHIR endpoint used for development and interoperability testing.
+    #
+    # The default HAPI endpoint is a public R4 test server. It must never be
+    # used for PHI or confidential healthcare information.
+    fhir_base_url: str = "https://hapi.fhir.org/baseR4"
+    fhir_timeout_seconds: float = 20.0
+
     api_host: str = "0.0.0.0"
     api_port: int = 8000
 

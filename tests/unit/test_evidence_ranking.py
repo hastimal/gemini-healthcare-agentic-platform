@@ -264,3 +264,174 @@ def test_query_used_does_not_create_fake_relevance():
     )
 
     assert score.relevance < 0.10
+
+
+def test_fhir_evidence_is_scored_but_not_selected_for_provider_discovery():
+    """
+    FHIR interoperability evidence remains observable and scored, but a
+    public test-server FHIR record must not consume a grounding slot in
+    the provider-recommendation workflow.
+    """
+
+    user_query = UserQuery(
+        text="Find pediatric dentists in Houston for a child with dental anxiety.",
+        location="Houston, TX",
+        specialty="Pediatric Dentistry",
+        intent=SearchIntent.PROVIDER_DISCOVERY,
+    )
+
+    results = [
+        SearchResult(
+            source_type=SourceType.PROVIDER,
+            title=f"Provider {index}",
+            provider_name=f"Provider {index}",
+            location="Houston, TX",
+            snippet="Pediatric dentist in Houston.",
+            metadata={"npi": f"123456789{index}"},
+        )
+        for index in range(3)
+    ]
+
+    results.extend(
+        [
+            SearchResult(
+                source_type=SourceType.PUBMED,
+                title="Pediatric Dental Anxiety Behavior Guidance",
+                snippet="Biomedical evidence about pediatric dental anxiety.",
+                metadata={"pmid": "11111111"},
+            ),
+            SearchResult(
+                source_type=SourceType.PUBMED,
+                title="Nitrous Oxide Sedation in Pediatric Dentistry",
+                snippet="Biomedical evidence about pediatric dental sedation.",
+                metadata={"pmid": "22222222"},
+            ),
+            SearchResult(
+                source_type=SourceType.FHIR,
+                title="FHIR PractitionerRole Example",
+                url="https://example.com/fhir/PractitionerRole/123",
+                snippet=(
+                    "FHIR interoperability resource describing practitioner, "
+                    "specialty, organization, and location relationships."
+                ),
+                retrieved_by="fhir",
+                metadata={
+                    "fhir_resource_type": "PractitionerRole",
+                    "fhir_resource_id": "123",
+                },
+            ),
+        ]
+    )
+
+    ranker = EvidenceRanker()
+
+    evidence = ranker.rank(
+        user_query=user_query,
+        results=results,
+        top_k=5,
+    )
+
+    fhir_items = [
+        item
+        for item in evidence
+        if item.result.source_type == SourceType.FHIR
+    ]
+
+    assert len(fhir_items) == 1
+
+    # FHIR still participates in deterministic scoring.
+    assert ranker.total_score(fhir_items[0]) > 0
+
+    # But it does not enter provider-recommendation grounding.
+    assert fhir_items[0].selected is False
+
+
+def test_provider_discovery_preserves_three_provider_two_pubmed_selection_with_fhir():
+    """
+    Adding FHIR interoperability evidence must not displace the established
+    3-provider + 2-PubMed grounding policy for top_k=5.
+    """
+
+    user_query = UserQuery(
+        text="Find pediatric dentists in Houston for a child with dental anxiety.",
+        location="Houston, TX",
+        specialty="Pediatric Dentistry",
+        intent=SearchIntent.PROVIDER_DISCOVERY,
+    )
+
+    results = [
+        SearchResult(
+            source_type=SourceType.PROVIDER,
+            title=f"Provider {index}",
+            provider_name=f"Provider {index}",
+            location="Houston, TX",
+            snippet="Pediatric dentist in Houston.",
+            metadata={"npi": f"987654321{index}"},
+        )
+        for index in range(3)
+    ]
+
+    results.extend(
+        [
+            SearchResult(
+                source_type=SourceType.PUBMED,
+                title="Pediatric Dental Anxiety Study",
+                snippet="Evidence about pediatric dental anxiety.",
+                metadata={"pmid": "33333333"},
+            ),
+            SearchResult(
+                source_type=SourceType.PUBMED,
+                title="Pediatric Dental Sedation Study",
+                snippet="Evidence about pediatric dental sedation.",
+                metadata={"pmid": "44444444"},
+            ),
+            SearchResult(
+                source_type=SourceType.FHIR,
+                title="FHIR PractitionerRole Example",
+                url="https://example.com/fhir/PractitionerRole/456",
+                snippet="FHIR healthcare interoperability example.",
+                retrieved_by="fhir",
+                metadata={
+                    "fhir_resource_type": "PractitionerRole",
+                    "fhir_resource_id": "456",
+                },
+            ),
+        ]
+    )
+
+    ranker = EvidenceRanker()
+
+    evidence = ranker.rank(
+        user_query=user_query,
+        results=results,
+        top_k=5,
+    )
+
+    selected = [
+        item
+        for item in evidence
+        if item.selected
+    ]
+
+    selected_providers = [
+        item
+        for item in selected
+        if item.result.source_type == SourceType.PROVIDER
+    ]
+
+    selected_pubmed = [
+        item
+        for item in selected
+        if item.result.source_type == SourceType.PUBMED
+    ]
+
+    selected_fhir = [
+        item
+        for item in selected
+        if item.result.source_type == SourceType.FHIR
+    ]
+
+    assert len(selected) == 5
+    assert len(selected_providers) == 3
+    assert len(selected_pubmed) == 2
+    assert len(selected_fhir) == 0

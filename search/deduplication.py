@@ -62,8 +62,11 @@ def _deduplication_key(
         return f"pubmed:pmid:{pmid}"
 
     # URL is our next-best identifier for other retrieved evidence.
+    #
+    # SearchResult.url is modeled as Pydantic HttpUrl, so normalize it
+    # through str() before applying string operations.
     if result.url:
-        normalized_url = result.url.rstrip("/").lower()
+        normalized_url = str(result.url).rstrip("/").lower()
         return f"url:{normalized_url}"
 
     # Last-resort fallback when no stable identifier or URL exists.

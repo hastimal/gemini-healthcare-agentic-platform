@@ -14,24 +14,17 @@ class EvidenceRanker:
     """
     Convert SearchResult objects into scored and selected Evidence.
 
-    v0.3 uses two distinct concepts:
+    Ranking and selection are intentionally separate:
 
-    1. Ranking
-       Every evidence item receives a deterministic weighted score.
+    1. Every evidence item receives a deterministic score.
+    2. Selection decides which evidence enters the grounding context.
 
-    2. Selection
-       Evidence is selected with source diversity so one source type
-       does not consume the entire grounding context.
+    v0.7 introduces FHIR interoperability evidence.
 
-    This is especially important for provider discovery.
-
-    A provider recommendation may require:
-
-        provider identity evidence
-            +
-        scientific/supporting evidence
-
-    rather than five nearly identical registry records.
+    For provider-discovery answers, FHIR evidence remains ranked and
+    observable but does not consume the provider/scientific grounding
+    slots by default. This prevents arbitrary public test-server records
+    from displacing provider registry or biomedical evidence.
     """
 
     def __init__(
@@ -51,8 +44,8 @@ class EvidenceRanker:
 
         All evidence remains in the returned list.
 
-        `selected=True` indicates which items are intended to move
-        into the grounding stage.
+        `selected=True` indicates which evidence is allowed to move into
+        the grounded-answer synthesis stage.
         """
 
         evidence_items: list[Evidence] = []
@@ -73,8 +66,6 @@ class EvidenceRanker:
 
             evidence_items.append(evidence)
 
-        # Global ranking remains score-based so evaluation can inspect
-        # the strongest evidence independently of selection policy.
         evidence_items.sort(
             key=lambda item: self.scorer.weighted_total(item.score),
             reverse=True,
@@ -105,24 +96,23 @@ class EvidenceRanker:
         top_k: int,
     ) -> None:
         """
-        Select a diverse evidence set.
+        Select evidence for grounded-answer synthesis.
 
-        For provider discovery, reserve approximately:
+        Provider discovery reserves approximately:
 
-            60% provider evidence
-            40% supporting/non-provider evidence
+            3 provider registry records
+            2 scientific/supporting records
 
-        With top_k=5 this becomes:
+        FHIR records remain part of the ranked evidence collection but
+        are excluded from the default provider-recommendation grounding
+        context in v0.7.
 
-            3 providers
-            2 supporting evidence items
+        Why:
 
-        If one category does not contain enough results, remaining
-        slots are filled with the highest-ranked unselected evidence.
-
-        This policy prevents a large provider registry result set from
-        completely crowding scientific evidence out of the grounding
-        context.
+        The current FHIR endpoint is a public interoperability test
+        server. Its records demonstrate FHIR resource structures and
+        relationships but must not be treated as independent evidence
+        about NPPES provider quality, licensure, or suitability.
         """
 
         if top_k <= 0:
@@ -130,14 +120,15 @@ class EvidenceRanker:
 
         intent = user_query.intent
 
-        # Some callers may not explicitly populate UserQuery.intent.
-        # In that case provider records in the evidence pool are a
-        # strong signal that we are handling provider discovery.
         has_provider_results = any(
-            item.result.source_type == SourceType.PROVIDER for item in evidence_items
+            item.result.source_type == SourceType.PROVIDER
+            for item in evidence_items
         )
 
-        provider_discovery = intent == SearchIntent.PROVIDER_DISCOVERY or has_provider_results
+        provider_discovery = (
+            intent == SearchIntent.PROVIDER_DISCOVERY
+            or has_provider_results
+        )
 
         if not provider_discovery:
             for evidence in evidence_items[:top_k]:
@@ -161,29 +152,41 @@ class EvidenceRanker:
             if evidence.result.source_type == SourceType.PROVIDER
         ]
 
+        # Scientific/supporting evidence for the provider recommendation.
+        #
+        # FHIR is deliberately excluded here in v0.7 because the public
+        # test-server records are interoperability examples rather than
+        # independent provider-recommendation evidence.
         supporting = [
             evidence
             for evidence in evidence_items
-            if evidence.result.source_type != SourceType.PROVIDER
+            if evidence.result.source_type
+            not in {
+                SourceType.PROVIDER,
+                SourceType.FHIR,
+            }
         ]
 
         selected_count = 0
 
-        # Select strongest provider candidates first.
         for evidence in providers[:provider_target]:
             evidence.selected = True
             selected_count += 1
 
-        # Reserve supporting slots for sources such as PubMed.
         for evidence in supporting[:supporting_target]:
             evidence.selected = True
             selected_count += 1
 
-        # If either category had insufficient evidence, backfill using
-        # the strongest remaining evidence regardless of source type.
+        # Backfill provider/scientific evidence first.
+        #
+        # FHIR remains intentionally outside the provider recommendation
+        # grounding context for this release.
         if selected_count < top_k:
             for evidence in evidence_items:
                 if evidence.selected:
+                    continue
+
+                if evidence.result.source_type == SourceType.FHIR:
                     continue
 
                 evidence.selected = True
@@ -199,8 +202,7 @@ class EvidenceRanker:
         """
         Create a deterministic evidence summary.
 
-        v0.3 deliberately avoids LLM-generated evidence summaries.
-        Grounded synthesis belongs to v0.4.
+        Grounded synthesis belongs to the answer-generation layer.
         """
 
         if result.snippet:
