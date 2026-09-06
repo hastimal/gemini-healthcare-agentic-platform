@@ -18,6 +18,25 @@ v1.4  Security
 v2.0  Reusable Agentic Healthcare Framework
 ```
 
-## Next: v1.0
+## Completed: v1.0
 
-Package the accepted v0.9 behavior into a reproducible Docker runtime without changing healthcare evidence semantics.
+**Dockerized Reproducible Demo Runtime**
+
+v1.0 packages the accepted v0.9 application into a reproducible Docker runtime while preserving the local runtime and existing healthcare evidence semantics.
+
+Validated paths:
+
+```text
+Local  -> Gemini
+Local  -> Gemma / Ollama
+Docker -> Gemini
+Docker -> Gemma / native Ollama on macOS
+```
+
+The Docker Gemma path uses `host.docker.internal:11434` to reach native Ollama on macOS.
+
+## Next: v1.1
+
+**Evaluation Benchmark**
+
+Add repeatable evaluation around supported workflows while keeping deterministic application correctness separate from model/runtime variability.

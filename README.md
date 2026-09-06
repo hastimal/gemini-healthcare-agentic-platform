@@ -8,21 +8,33 @@ The project explores the evolution from traditional retrieval toward agentic hea
 
 ## Current Release
 
-**v0.9 — Generalized Query Planning + Dynamic Retrieval + GUI**
+**v1.0 — Dockerized Reproducible Demo Runtime**
 
-v0.9 removes flagship-query assumptions from planning and retrieval so the same three-agent Google ADK workflow can operate across supported healthcare questions rather than being configured around Houston pediatric dentistry.
+v1.0 packages the accepted v0.9 healthcare agent workflow into a reproducible Docker application runtime without changing the three-agent architecture, MCP retrieval paths, healthcare evidence semantics, or deterministic provider-grounding boundary.
 
-The planner now infers intent, optional location, optional specialty, and dynamic query fan-out. Retrieval follows that structured planner state and routes to NPPES, PubMed, or explicit FHIR interoperability retrieval.
+The same Streamlit application can now be launched in Docker with either **Gemini** or **Gemma + Ollama**:
 
-v0.9 also adds one Streamlit UI for both **Gemini** and **Gemma + Ollama**.
+```bash
+./scripts/demo-docker.sh gemini
+./scripts/demo-docker.sh gemma
+```
+
+On macOS, the Gemma Docker path intentionally keeps Ollama native on the host and connects from the application container through `host.docker.internal:11434`. This preserves the existing native Apple Silicon model runtime while containerizing the healthcare application itself.
+
+The original local runtime remains supported:
+
+```bash
+./scripts/demo-local.sh gemini
+./scripts/demo-local.sh gemma
+```
 
 Provider discovery remains evidence-restricted. NPPES supports provider identity, NPI, taxonomy, and reported location; it does not establish that a provider is “best”, board certified, actively licensed, in good standing, or offers a requested service.
+
+Containerization does not change healthcare evidence authority, privacy, security, or compliance guarantees.
 
 > **No evidence → no claim.**
 
 The original Houston pediatric-dentist question remains an acceptance/regression example. It is not application configuration.
-
----
 
 ## Project Direction
 
@@ -241,6 +253,84 @@ v1.4  SECURE
 v2.0  FRAMEWORK
       Reusable Agentic Healthcare Framework
 ```
+
+---
+
+# v1.0 — Dockerized Reproducible Demo Runtime
+
+v1.0 adds Docker as an additional runtime option around the accepted v0.9 application.
+
+```text
+Gemini
+Browser
+   |
+   v
+Dockerized Streamlit App :8501
+   |
+   v
+Google ADK
+   |
+   v
+Gemini API
+
+
+Gemma on macOS
+Browser
+   |
+   v
+Dockerized Streamlit App :8501
+   |
+   v
+Google ADK
+   |
+   v
+LiteLLM
+   |
+   v
+host.docker.internal:11434
+   |
+   v
+Native Ollama
+   |
+   v
+Gemma
+```
+
+The Docker layer does not replace the local runtime and does not introduce another agent. The platform still uses exactly three core agents and the same MCP-backed NPPES, PubMed, and FHIR retrieval architecture.
+
+### Docker Quick Start
+
+Run Gemini:
+
+```bash
+./scripts/demo-docker.sh gemini
+```
+
+Run Gemma:
+
+```bash
+./scripts/demo-docker.sh gemma
+```
+
+Open:
+
+```text
+http://localhost:8501
+```
+
+Stop:
+
+```bash
+./scripts/demo-docker-stop.sh
+```
+
+For safe Compose validation without expanding `.env` values into terminal output:
+
+```bash
+docker compose config --quiet
+```
+
+See `DOCKER-DEMO-README.md` for architecture, prerequisites, validation, troubleshooting, and extension notes.
 
 ---
 
@@ -857,43 +947,41 @@ examples/v0.7-acceptance.md
 
 ```text
 agents/
-    Google ADK agents, prompts, tools, and workflows
-
-app/
-    Application configuration
+    Google ADK three-agent workflow
 
 connectors/
-    External healthcare data-source connectors
+    NPPES, PubMed, FHIR and supporting healthcare connectors
 
-connectors/fhir/
-    FHIR R4 client and normalization
-
-grounding/
-    Evidence scoring, ranking, citations, and grounded answers
+llm/
+    Gemini/Gemma model selection and synthesis adapters
 
 mcp_services/
-    MCP servers and MCP client adapters
-
-mcp_services/fhir_server/
-    FHIR MCP server and tools
-
-models/
-    Shared structured data models
+    MCP servers and healthcare tool wrappers
 
 search/
-    Query fan-out, retrieval, MCP orchestration, and deduplication
+    query planning, dynamic retrieval, ranking, grounding
+
+ui/
+    Streamlit demo application
+
+scripts/
+    local and Docker demo/test helpers
 
 tests/
-    Unit and regression tests
-
-docs/
-    Architecture and integration documentation
+    deterministic regression and integration coverage
 
 examples/
-    Acceptance-run documentation and examples
-```
+    acceptance-run documentation and examples
 
----
+Dockerfile
+    reproducible Python/Streamlit application image
+
+docker-compose.yml
+    Docker application runtime configuration
+
+DOCKER-DEMO-README.md
+    v1.0 Docker runbook and architecture notes
+```
 
 # Important v0.7 Files
 
@@ -929,43 +1017,31 @@ tests/unit/test_evidence_ranking.py
 
 # Documentation
 
-Overall architecture:
+Core project documentation:
 
 ```text
+README.md
+ROADMAP.md
+CHANGELOG.md
+LEARNING_GUIDE.md
 docs/architecture.md
+GUI-DEMO-README.md
+UI-E2E-README.md
+DOCKER-DEMO-README.md
 ```
 
-FHIR architecture and integration:
-
-```text
-docs/fhir-integration.md
-```
-
-MCP architecture:
-
-```text
-docs/mcp-architecture.md
-```
-
-v0.7 acceptance run:
-
-```text
-examples/v0.7-acceptance.md
-```
-
-v0.8 model portability:
-
-```text
-docs/model-portability.md
-```
-
-v0.8 acceptance:
+Acceptance examples:
 
 ```text
 examples/v0.8-acceptance.md
+examples/v0.9-acceptance.md
 ```
 
----
+v1.0 Docker runtime:
+
+```text
+DOCKER-DEMO-README.md
+```
 
 # Run the Google ADK Workflow
 
@@ -1022,20 +1098,20 @@ v0.7  FHIR healthcare interoperability
 
 v0.8  Gemini + Gemma / Ollama
 
-v0.9  Docker
+v0.9  Generalized Query Planning + Dynamic Retrieval + GUI
 
-v1.0  Evaluation benchmark
+v1.0  Dockerized Reproducible Demo Runtime
 
-v1.1  Kubernetes / GKE
+v1.1  Evaluation Benchmark
 
-v1.2  OpenTelemetry
+v1.2  Kubernetes / GKE
 
-v1.3  Security
+v1.3  OpenTelemetry
 
-v2.0  Public framework release
+v1.4  Security
+
+v2.0  Reusable Agentic Healthcare Framework
 ```
-
----
 
 # v0.8 Model Portability
 
@@ -1069,11 +1145,11 @@ See `docs/model-portability.md` and `examples/v0.8-acceptance.md` for the archit
 
 # Next Milestone
 
-## v0.9 — Docker
+## v1.1 — Evaluation Benchmark
 
-The next milestone will containerize the application and supporting services while preserving the v0.8 model-provider abstraction.
+The next milestone will add repeatable evaluation around supported workflows and evidence behavior.
 
----
+The benchmark should measure platform behavior without turning one acceptance run into a model-quality or latency guarantee. It should preserve the same healthcare evidence boundaries and distinguish deterministic application correctness from model/runtime variability.
 
 # Project Goal
 
