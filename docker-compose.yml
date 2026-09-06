@@ -1,0 +1,21 @@
+services:
+  healthcare-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gemini-healthcare-agentic-platform:v1.0-dev
+    env_file:
+      - .env
+    environment:
+      MODEL_PROVIDER: ${MODEL_PROVIDER:-gemini}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      GEMMA_MODEL: ${GEMMA_MODEL:-gemma4:12b}
+    ports:
+      - "${DEMO_PORT:-8501}:8501"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 5

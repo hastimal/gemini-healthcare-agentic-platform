@@ -6,6 +6,61 @@ This project is developed incrementally. Each milestone introduces a capability 
 
 ---
 
+## [v1.0.0] - 2026-09-06
+
+### Dockerized Reproducible Demo Runtime
+
+#### Added
+
+- Python 3.11 slim Docker application image
+- Docker Compose runtime for the Streamlit healthcare application
+- Streamlit container health check
+- `./scripts/demo-docker.sh gemini`
+- `./scripts/demo-docker.sh gemma`
+- `./scripts/demo-docker-stop.sh`
+- `.dockerignore` protections for `.env`, virtual environments, caches, logs, and test artifacts
+- macOS Docker-to-host Ollama connectivity through `host.docker.internal:11434`
+- `DOCKER-DEMO-README.md`
+
+#### Preserved
+
+- exactly three core Google ADK agents
+- MCP-backed NPPES, PubMed, and FHIR retrieval
+- deterministic provider-discovery grounding
+- provider-scoped citations
+- existing local Gemini and Gemma demo scripts
+
+#### Runtime Architecture
+
+```text
+Gemini:
+Browser -> Dockerized Streamlit -> Google ADK -> Gemini API
+
+Gemma on macOS:
+Browser -> Dockerized Streamlit -> Google ADK -> LiteLLM
+        -> host.docker.internal:11434 -> native Ollama -> Gemma
+```
+
+#### Acceptance
+
+```text
+Docker + Gemini:              PASS
+Docker + Gemma/native Ollama: PASS
+Local + Gemma/native Ollama:  PASS
+Docker -> host Ollama:        PASS
+Streamlit container health:   PASS
+
+Deterministic tests: 85 passed, 5 skipped, 1 dependency warning
+```
+
+The OpenTelemetry dependency deprecation warning remains non-blocking. These checks are functional acceptance, not a performance benchmark.
+
+#### Boundaries
+
+Dockerization does not make the application HIPAA compliant, PHI-safe, clinically validated, secure, private, or production-ready by itself. Existing source-authority and grounding rules remain unchanged.
+
+---
+
 ## [v0.9.0] - 2026-09-06
 
 ### Generalized Query Planning + Dynamic Retrieval + GUI
@@ -600,11 +655,15 @@ The releases intentionally build on one another.
           Gemini + Gemma / Ollama
                          |
                          v
-    v0.9  CONTAINERIZE
-          Docker
+    v0.9  GENERALIZE
+          Dynamic Retrieval + GUI
                          |
                          v
-    v1.0  MEASURE
+    v1.0  CONTAINERIZE
+          Docker Runtime
+                         |
+                         v
+    v1.1  MEASURE
           Evaluation Benchmark
 
 ---
@@ -638,16 +697,7 @@ This separation is intentional. A provider registry should not be treated as sci
 
 # Planned Milestones
 
-## v0.9.0 - Docker
-
-Planned focus:
-
-- Containerized application runtime
-- Containerized MCP services
-- Local multi-service development
-- Portable model and agent execution
-
-## v1.0.0 - Evaluation Benchmark
+## v1.1.0 - Evaluation Benchmark
 
 Planned focus:
 
@@ -659,6 +709,14 @@ Planned focus:
 - Hallucination analysis
 - Latency
 - Cost
+
+## v1.2.0 - Kubernetes / GKE
+
+Planned focus:
+
+- Kubernetes deployment
+- GKE deployment path
+- container orchestration for the accepted application runtime
 
 ---
 

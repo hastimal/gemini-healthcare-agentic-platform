@@ -1338,3 +1338,86 @@ Provider discovery remains evidence-restricted. NPPES supports identity/NPI/taxo
 `ui/streamlit_app.py` is the single UI for both model paths. The model is selected before process startup; the UI exposes grounded answer, search plan, evidence, citations, limitations, research state, and the Google ADK event trace.
 
 Final acceptance: 85 passed / 5 skipped deterministic tests; live UI E2E 5/5 Gemini and 5/5 Gemma. See `examples/v0.9-acceptance.md`.
+
+---
+
+# v1.0 — Dockerized Reproducible Demo Runtime
+
+v1.0 adds a runtime boundary around the accepted v0.9 application. The Docker layer packages the Streamlit application and Python dependencies; it does not change the agent graph, MCP tool layer, evidence model, or deterministic provider-grounding semantics.
+
+## Runtime Paths
+
+```text
+                            +----------------------+
+                            |      User Browser    |
+                            +----------+-----------+
+                                       |
+                                       v
+                            +----------------------+
+                            | Dockerized Streamlit |
+                            | healthcare-app :8501 |
+                            +----------+-----------+
+                                       |
+                                       v
+                                  Google ADK
+                                       |
+                         +-------------+-------------+
+                         |                           |
+                         v                           v
+                      Gemini                       Gemma
+                         |                           |
+                         v                           v
+                   Gemini API                    LiteLLM
+                                                     |
+                                                     v
+                                      host.docker.internal:11434
+                                                     |
+                                                     v
+                                           Native Ollama (macOS)
+                                                     |
+                                                     v
+                                                   Gemma
+```
+
+The container executes the same three core agents:
+
+```text
+Search Planner Agent
+        |
+        v
+Healthcare Research Agent
+        |
+        v
+Evidence & Answer Agent
+```
+
+MCP-backed retrieval remains unchanged:
+
+```text
+Healthcare Research Agent
+        |
+        v
+MCP Retrieval Orchestrator
+   /          |            v           v           v
+NPPES       PubMed      FHIR R4
+```
+
+## Why Native Ollama on macOS?
+
+For the macOS Gemma path, Ollama remains a native host process and the application container reaches it through `host.docker.internal`.
+
+This is a runtime topology choice. It is not a claim that native Ollama is inherently secure, private, compliant, PHI-safe, or production-ready.
+
+## Runtime Parity
+
+```text
+Local:
+./scripts/demo-local.sh gemini
+./scripts/demo-local.sh gemma
+
+Docker:
+./scripts/demo-docker.sh gemini
+./scripts/demo-docker.sh gemma
+```
+
+The Streamlit UI, Google ADK workflow, MCP tools, evidence ranking, citations, and provider-discovery safety boundary remain shared.
