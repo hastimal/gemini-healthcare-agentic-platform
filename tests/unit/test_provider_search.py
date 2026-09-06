@@ -34,7 +34,10 @@ SAMPLE_PROVIDER = {
 def test_normalize_provider():
     client = NPPESProviderClient()
 
-    result = client._normalize_provider(SAMPLE_PROVIDER)
+    result = client._normalize_provider(
+        SAMPLE_PROVIDER,
+        requested_specialty="Pediatric Dentistry",
+    )
 
     assert result.source_type == SourceType.PROVIDER
     assert result.provider_name == "Jane Smith DDS"

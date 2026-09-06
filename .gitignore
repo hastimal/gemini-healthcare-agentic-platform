@@ -58,3 +58,6 @@ service-account*.json
 # Kubernetes secrets
 deployment/kubernetes/secret.yaml
 agents/.adk/
+
+# Local demo runtime
+.demo/

@@ -1297,3 +1297,44 @@ No evidence -> no claim
 ```
 
 These principles are intended to remain stable as the platform expands.
+---
+
+# v0.9 — Generalized Query Planning + Dynamic Retrieval + GUI
+
+## Before v0.9
+
+```text
+User Question -> Planner -> Houston/Pediatric Dentistry assumptions -> Retrieval
+```
+
+## After v0.9
+
+```text
+Any Supported Healthcare Question
+        |
+        v
+Search Planner Agent
+(intent + optional location + optional specialty + dynamic queries)
+        |
+        v
+Healthcare Research Agent
+   /        |        \
+NPPES     PubMed     FHIR
+   \        |        /
+        v
+SearchResult[]
+        |
+        v
+Evidence & Answer Agent
+        |
+        v
+One Streamlit UI -> Gemini OR Gemma/Ollama
+```
+
+The LLM planner is the semantic reasoning layer. Deterministic code normalizes and constructs the `SearchPlan`; retrieval follows planner state. Provider discovery derives location and specialty from the current query, with a conservative NPPES specialty resolver for common wording differences. Biomedical research/health-information routes to PubMed; explicit interoperability queries route to FHIR.
+
+Provider discovery remains evidence-restricted. NPPES supports identity/NPI/taxonomy/reported location, not “best” ranking, board certification, active licensure, good standing, clinical quality, or service availability. Public HAPI FHIR data remains interoperability evidence, not provider-quality evidence.
+
+`ui/streamlit_app.py` is the single UI for both model paths. The model is selected before process startup; the UI exposes grounded answer, search plan, evidence, citations, limitations, research state, and the Google ADK event trace.
+
+Final acceptance: 85 passed / 5 skipped deterministic tests; live UI E2E 5/5 Gemini and 5/5 Gemma. See `examples/v0.9-acceptance.md`.
