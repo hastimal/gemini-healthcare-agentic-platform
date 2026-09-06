@@ -9,17 +9,14 @@ from google.adk import Agent
 
 from agents.adk.models import PlannerAgentOutput
 from agents.search_planner.tools import create_healthcare_search_plan
-from app.config import get_settings
-
-settings = get_settings()
-
+from llm.model_factory import get_agent_model
 
 search_planner_agent = Agent(
     name="search_planner_agent",
-    model=settings.gemini_model,
+    model=get_agent_model(),
     mode="single_turn",
     description=(
-        "Plans healthcare provider-discovery searches using Gemini query "
+        "Plans healthcare provider-discovery searches using query "
         "fan-out and the platform's validated SearchPlan model."
     ),
     instruction="""

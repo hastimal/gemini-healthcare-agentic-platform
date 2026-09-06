@@ -1,6 +1,6 @@
 # gemini-healthcare-agentic-platform
 
-A healthcare-focused Agentic AI platform for exploring trustworthy search, evidence retrieval, grounding, citations, multi-agent workflows, Model Context Protocol (MCP), and FHIR healthcare interoperability using Gemini and Google ADK.
+A healthcare-focused Agentic AI platform for exploring trustworthy search, evidence retrieval, grounding, citations, multi-agent workflows, Model Context Protocol (MCP), FHIR healthcare interoperability, and model portability using Gemini, Gemma, and Google ADK.
 
 The project explores the evolution from traditional retrieval toward agentic healthcare search while keeping evidence provenance, source authority, interoperability boundaries, grounding, and safety explicit.
 
@@ -8,17 +8,22 @@ The project explores the evolution from traditional retrieval toward agentic hea
 
 ## Current Release
 
-**v0.7 — FHIR Healthcare Interoperability**
+**v0.8 — Gemini + Gemma / Ollama**
 
-v0.7 extends the MCP healthcare retrieval architecture with FHIR R4 support.
+v0.8 introduces model-runtime portability while preserving the same Google ADK three-agent healthcare architecture.
 
-The platform now combines three distinct healthcare evidence capabilities:
+The reasoning agents can now use either:
 
-- **CMS NPPES** — provider registry evidence
-- **PubMed** — biomedical and scientific evidence
-- **FHIR R4** — standardized healthcare interoperability evidence
+- **Gemini** — hosted Google model path
+- **Gemma + Ollama** — local Gemma path through LiteLLM
 
-FHIR is treated as a tool and data capability. It does not introduce another core agent.
+Both paths reuse the same Google ADK workflow, MCP healthcare tools, NPPES/PubMed/FHIR retrieval, evidence ranking, deterministic citations, and healthcare safety boundaries.
+
+For provider discovery, final provider claims are assembled deterministically from selected evidence. Models continue to plan and invoke tools, while deterministic code owns the safety-critical provider claim boundary.
+
+> **No evidence → no claim.**
+
+The v0.8 acceptance scope is the flagship provider-discovery workflow. v0.8 does not claim that every intent has been proven portable or that Gemini and Gemma have equivalent runtime characteristics.
 
 ---
 
@@ -90,7 +95,7 @@ User Healthcare Question
           v
 +----------------------+
 | Search Planner Agent |
-|    Gemini + ADK      |
+| Gemini/Gemma + ADK  |
 +----------+-----------+
            |
            v
@@ -698,7 +703,7 @@ Evidence Selection
 Deterministic Citations
       |
       v
-Evidence-Restricted Gemini Context
+Evidence-Restricted Grounding
       |
       v
 Grounded Answer
@@ -901,6 +906,18 @@ v0.7 acceptance run:
 examples/v0.7-acceptance.md
 ```
 
+v0.8 model portability:
+
+```text
+docs/model-portability.md
+```
+
+v0.8 acceptance:
+
+```text
+examples/v0.8-acceptance.md
+```
+
 ---
 
 # Run the Google ADK Workflow
@@ -927,15 +944,15 @@ pytest -q
 git diff --check
 ```
 
-Current v0.7 pre-release regression checkpoint:
+Current v0.8 regression checkpoint:
 
 ```text
-45 passed
+53 passed, 1 warning
 ```
 
 One OpenTelemetry dependency deprecation warning may currently appear during the test suite.
 
-It is non-blocking and is not treated as resolved by v0.7.
+It is non-blocking and is not treated as resolved by v0.8.
 
 ---
 
@@ -956,7 +973,7 @@ v0.6  MCP tool layer
 
 v0.7  FHIR healthcare interoperability
 
-v0.8  Gemini vs Gemma / Ollama
+v0.8  Gemini + Gemma / Ollama
 
 v0.9  Docker
 
@@ -973,27 +990,41 @@ v2.0  Public framework release
 
 ---
 
-# Next Milestone
+# v0.8 Model Portability
 
-## v0.8 — Gemini vs Gemma / Ollama
-
-The next milestone will explore model-runtime portability.
-
-The goal is to keep the architecture established through v0.7 independent of a single model runtime:
+The current milestone demonstrates one Google ADK healthcare agent architecture with two model paths:
 
 ```text
-                Agent Architecture
-                       |
-             +---------+---------+
-             |                   |
-             v                   v
-          Gemini              Gemma
-                                |
-                                v
-                              Ollama
+MODEL_PROVIDER
+     |
+  +--+--+
+  |     |
+  v     v
+Gemini Gemma
+        |
+        v
+      Ollama
+        |
+        v
+      LiteLLM
+  \     /
+   \   /
+ Google ADK
+     |
+ Same 3 Agents
 ```
 
-The three-agent architecture, MCP tool boundaries, healthcare connectors, evidence model, and grounding pipeline should remain reusable while the underlying model runtime changes.
+The flagship provider-discovery workflow has been accepted on both paths. The Gemma acceptance run completed with Gemini credentials unavailable.
+
+See `docs/model-portability.md` and `examples/v0.8-acceptance.md` for the architecture and observed acceptance results.
+
+---
+
+# Next Milestone
+
+## v0.9 — Docker
+
+The next milestone will containerize the application and supporting services while preserving the v0.8 model-provider abstraction.
 
 ---
 

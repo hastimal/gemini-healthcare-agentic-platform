@@ -1,28 +1,33 @@
 """
 Google ADK Evidence & Answer Agent.
 
-This final specialist agent consumes `research_output` and reuses the
-tested v0.3 ranking and v0.4 grounding/citation pipeline.
+This final specialist agent invokes the tested evidence-ranking,
+grounding, citation, and validation pipeline.
 
-The result is stored under `answer_output`.
+v0.8 uses ADK state for the authoritative handoff:
+
+    research_output
+        -> Evidence & Answer Agent
+        -> build_grounded_healthcare_answer()
+        -> answer_output
+
+The grounding tool owns the final structured answer state.
 """
 
 from google.adk import Agent
 
-from agents.adk.models import EvidenceAnswerAgentOutput
-from agents.evidence_answer.tools import build_grounded_healthcare_answer
-from app.config import get_settings
-
-settings = get_settings()
-
+from agents.evidence_answer.tools import (
+    build_grounded_healthcare_answer,
+)
+from llm.model_factory import get_agent_model
 
 evidence_answer_agent = Agent(
     name="evidence_answer_agent",
-    model=settings.gemini_model,
+    model=get_agent_model(),
     mode="single_turn",
     description=(
-        "Ranks healthcare evidence and produces a validated, "
-        "citation-grounded final answer."
+        "Invokes the deterministic healthcare evidence-ranking, "
+        "grounding, citation, and validation pipeline."
     ),
     instruction="""
 You are the Evidence & Answer Agent in a sequential healthcare
@@ -30,30 +35,27 @@ evidence workflow.
 
 The Healthcare Research Agent has already completed evidence retrieval.
 
-Its structured output is available here:
+The authoritative research payload is stored in ADK session state under:
 
-{research_output}
+research_output
 
-That object contains:
-
-- user_query
-- search_plan
-- search_results
-- retrieved_sources
-- deduplicated_sources
-
-Your responsibility is ONLY to invoke the existing evidence ranking,
+Your responsibility is ONLY to invoke the existing evidence-ranking,
 selection, grounding, citation, and validation pipeline.
 
 You MUST:
 
-1. Read all five fields from research_output.
-2. Call `build_grounded_healthcare_answer` exactly once.
-3. Return the tool result using the required structured output schema.
+1. Call `build_grounded_healthcare_answer` exactly once.
+2. Call it with NO arguments.
+3. Do not reconstruct research_output.
+4. Do not copy search results into the function call.
+5. Do not independently rank providers.
+6. Do not independently generate the final healthcare answer.
+7. Do not invent providers, credentials, services, citations,
+   license status, provider capabilities, or medical claims.
 
-Do not convert the objects into JSON strings.
+The tool reads `research_output` directly from ADK state.
 
-The grounding tool owns:
+The tool owns:
 
 - evidence scoring
 - evidence ranking
@@ -63,23 +65,11 @@ The grounding tool owns:
 - provider recommendation validation
 - evidence limitations
 - grounded answer generation
+- authoritative `answer_output` state
 
-Do NOT independently invent:
+After the tool completes, your work is complete.
 
-- providers
-- credentials
-- services
-- citations
-- license status
-- provider capabilities
-- medical claims
-
-Return exactly:
-
-- grounded_answer
-- selected_evidence_count
+Do not summarize, rewrite, repeat, or regenerate the grounded answer.
 """,
     tools=[build_grounded_healthcare_answer],
-    output_schema=EvidenceAnswerAgentOutput,
-    output_key="answer_output",
 )

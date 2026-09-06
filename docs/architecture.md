@@ -17,6 +17,8 @@ FHIR is not a fourth agent.
 
 FHIR, NPPES, and PubMed are data capabilities accessed through MCP-backed tools.
 
+v0.8 adds a model-provider boundary so the same three Google ADK agents can run with hosted Gemini or locally operated Gemma through Ollama and LiteLLM.
+
 ---
 
 ## High-Level Architecture
@@ -197,37 +199,29 @@ The Research Agent does not produce the final healthcare answer.
 
 ## Defensive Planner Handoff
 
-The Google ADK workflow uses structured planner output, but tool calls are still LLM-mediated.
-
-During v0.7 end-to-end validation, the Research Agent received a `SearchPlan` where a redundant `intent` field had been omitted even though the validated `UserQuery` contained the same intent.
-
-The Research Agent tool boundary therefore performs defensive normalization before validating the final `SearchPlan`.
-
-Conceptually:
+v0.8 strengthens the planner-to-research handoff by treating Google ADK session state as the authoritative workflow boundary.
 
 ```text
 Planner Output
      |
      v
-Validate UserQuery
+ADK State
      |
      v
-Copy SearchPlan
-     |
-     +--> restore missing intent from UserQuery
-     |
-     +--> restore missing original_query when needed
+Healthcare Research Agent
      |
      v
-Validate SearchPlan
+retrieve_healthcare_evidence()
      |
      v
-Execute deterministic retrieval
+Tool reads planner_output from state
 ```
 
-This is a resilience boundary.
+The model no longer needs to reconstruct the full `UserQuery` and `SearchPlan` as tool-call arguments.
 
-It does not change the meaning of the plan or introduce new evidence.
+The same pattern is used for the Research → Evidence handoff: the Evidence tool reads authoritative `research_output` from ADK state.
+
+This reduces unnecessary model-dependent structured-data transformation while preserving the same three-agent architecture.
 
 ---
 
@@ -914,7 +908,11 @@ Citation Construction
 Evidence-Restricted Context
       |
       v
-Gemini
+Grounding Policy
+      |
+      +--> Provider Discovery -> Deterministic Grounding
+      |
+      +--> Other supported intents -> Configured Synthesis Provider
       |
       v
 Grounded Answer
@@ -999,7 +997,7 @@ The final system principle remains:
    - cite
             |
             v
-7. Grounded Gemini generation
+7. Grounded answer construction
             |
             v
 8. Answer
@@ -1136,47 +1134,76 @@ Evidence Evaluation
 Evidence & Answer Agent
 
 
-Generation
+Model Execution
+   |
+   +--> Gemini
+   |
+   +--> Gemma / Ollama
+
+Provider Discovery
    |
    v
-Gemini
+Deterministic Evidence-Bound Grounding
 ```
 
 This separation makes it easier to replace individual layers later without redesigning the whole system.
 
 ---
 
-# Future Model Portability
+# v0.8 Model Portability
 
-v0.8 is expected to introduce model-runtime portability.
-
-The intended architecture is:
+v0.8 introduces two model-execution paths behind the same Google ADK agent architecture.
 
 ```text
-                 Agent Architecture
-                        |
-              +---------+---------+
-              |                   |
-              v                   v
-           Gemini              Gemma
-                                  |
-                                  v
-                               Ollama
+                         MODEL_PROVIDER
+                              |
+                 +------------+------------+
+                 |                         |
+                 v                         v
+              Gemini                     Gemma
+           Google hosted                  |
+                                          v
+                                       Ollama
+                                          |
+                                          v
+                                       LiteLLM
+                 |                         |
+                 +------------+------------+
+                              |
+                              v
+                         Google ADK
+                              |
+                 +------------+------------+
+                 |            |            |
+                 v            v            v
+              Planner      Research      Evidence
+               Agent         Agent         Agent
 ```
 
-The following layers should remain reusable:
+The MCP tools, healthcare connectors, evidence normalization, scoring, ranking, selection, citations, and healthcare safety boundaries remain shared.
+
+## Provider-Discovery Grounding
+
+For the flagship provider-discovery workflow, the final provider answer is deterministic after evidence selection.
 
 ```text
-Search planning
-MCP tools
-Healthcare connectors
-FHIR integration
-Evidence normalization
-Evidence scoring
-Evidence ranking
-Grounding
-Citations
+Selected Evidence
+      |
+      v
+Deterministic Citations
+      |
+      v
+Provider-Scoped Claim Construction
+      |
+      v
+Grounded Answer
 ```
+
+Models reason and invoke tools; deterministic code owns high-risk provider claims.
+
+The accepted v0.8 portability claim is scoped to the flagship provider-discovery workflow. The project does not claim identical model behavior, latency, or quality, and it does not claim that all other intents have completed equivalent Gemma acceptance testing.
+
+See `docs/model-portability.md` for the detailed design.
 
 ---
 

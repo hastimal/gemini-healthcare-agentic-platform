@@ -6,6 +6,82 @@ This project is developed incrementally. Each milestone introduces a capability 
 
 ---
 
+## [v0.8.0] - 2026-09-06
+
+### Gemini + Gemma / Ollama Model Portability
+
+#### Why
+
+v0.8 introduces model-runtime portability for the Google ADK healthcare multi-agent workflow.
+
+The architectural question is whether the same three-agent workflow can use hosted Gemini or locally operated Gemma while preserving MCP tools, healthcare retrieval, evidence ranking, citations, and safety boundaries.
+
+This is a functional-portability milestone, not a model benchmark.
+
+#### Added
+
+- shared model-provider factory for the three Google ADK agents
+- Gemini hosted model path
+- Gemma local model path through Ollama and LiteLLM
+- synthesis-provider abstraction for model-generated synthesis paths
+- Google ADK state-based handoffs for authoritative planner and research outputs
+- deterministic provider-discovery grounding
+- provider-scoped citation enforcement
+- model-factory regression tests
+- v0.8 diagnostic scripts
+- model-portability documentation
+- Gemini and Gemma acceptance documentation
+
+#### State-Based Agent Handoffs
+
+The Research and Evidence tools now read authoritative workflow data from Google ADK session state rather than requiring the model to reconstruct large structured payloads as tool arguments.
+
+This reduces unnecessary model-dependent transformation and improves portability across model runtimes.
+
+#### Provider-Discovery Safety Boundary
+
+For provider discovery, models continue to perform planning and tool invocation.
+
+Deterministic code owns final provider claims, citations, and recommendation assembly from selected evidence.
+
+This preserves the core rule:
+
+**No evidence -> no claim.**
+
+#### Acceptance Validation
+
+The flagship provider-discovery workflow completed on both configured model paths.
+
+Observed final acceptance state for both paths:
+
+```text
+Generated queries:       7
+Retrieved sources:      19
+Deduplicated sources:   19
+
+NPPES:                  10
+PubMed:                  6
+FHIR:                    3
+
+Selected evidence:       5
+```
+
+The Gemma/Ollama acceptance run completed with `GEMINI_API_KEY` and `GOOGLE_API_KEY` unavailable, demonstrating that the accepted Gemma provider-discovery path did not depend on hidden Gemini synthesis.
+
+These values are observations from acceptance runs, not benchmark metrics or performance guarantees.
+
+Final regression checkpoint:
+
+```text
+53 passed, 1 warning
+```
+
+The existing OpenTelemetry dependency deprecation warning remains non-blocking and is not treated as resolved by v0.8.
+
+The v0.8 acceptance claim is intentionally scoped to the flagship provider-discovery workflow. Synthesis adapters exist for other intents, but v0.8 does not claim that all intents have completed equivalent Gemma acceptance testing.
+
+---
+
 ## [v0.7.0] - 2026-09-05
 
 ### FHIR Healthcare Interoperability
@@ -507,7 +583,7 @@ The platform intentionally separates different types of healthcare evidence.
       -> What scientific evidence applies generally?
       -> Biomedical research evidence
 
-    Gemini + Google ADK
+    Gemini / Gemma + Google ADK
       -> Plan, orchestrate, and reason across evidence
 
     Grounding Layer
@@ -518,15 +594,6 @@ This separation is intentional. A provider registry should not be treated as sci
 ---
 
 # Planned Milestones
-
-## v0.8.0 - Gemini + Gemma / Ollama
-
-Planned focus:
-
-- Model-provider abstraction
-- Gemini hosted runtime
-- Gemma through Ollama
-- Comparable execution across model runtimes
 
 ## v0.9.0 - Docker
 

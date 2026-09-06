@@ -1,5 +1,6 @@
 google-genai
 google-adk
+litellm
 
 pydantic
 pydantic-settings

@@ -1,49 +1,96 @@
 """
 Tools used by the Google ADK Healthcare Research Agent.
 
-The Research Agent receives the structured output produced by the
-Search Planner Agent and retrieves evidence through MCP-backed services.
+The Healthcare Research Agent retrieves evidence through MCP-backed services.
 
-v0.7 retrieval sources:
+v0.8 architecture change
+------------------------
 
-    NPPES
-        Provider registry evidence.
+Earlier versions required the LLM-mediated Research Agent to reconstruct
+`user_query` and `search_plan` from `planner_output` and then pass those
+already-existing objects back as tool arguments.
 
-    PubMed
-        Biomedical/scientific evidence.
+In v0.8, the retrieval tool reads `planner_output` directly from Google ADK
+workflow state through ToolContext.
 
-    FHIR
-        Healthcare interoperability evidence.
+Why this change?
 
-Structured dictionaries are passed between agents instead of
-JSON-encoded strings to avoid nested JSON escaping problems.
+1. Model portability
+   Gemini and Gemma no longer need to reproduce large structured objects
+   identically before the deterministic retrieval pipeline can run.
 
-The tool boundary also performs a small amount of defensive normalization
-because an LLM agent may occasionally omit a redundant field while
-constructing tool arguments.
+2. Reliability
+   The application avoids unnecessary LLM-mediated changes such as omitted,
+   renamed, or reconstructed fields in an already-validated workflow object.
+
+3. Performance
+   Local models such as Gemma running through Ollama generate a much smaller
+   function call because the structured planner state remains in ADK state.
+
+The architectural responsibilities remain unchanged:
+
+    Search Planner Agent
+        -> planner_output in ADK state
+
+    Healthcare Research Agent
+        -> selects / invokes evidence retrieval
+
+    retrieve_healthcare_evidence
+        -> reads planner_output from ADK state
+        -> validates domain models
+        -> executes MCP-backed retrieval
+
+    MCP
+        -> NPPES
+        -> PubMed
+        -> FHIR
+
+This change does NOT alter:
+
+- the three-agent architecture
+- MCP retrieval
+- NPPES / PubMed / FHIR connectors
+- evidence ranking
+- grounding
+- citation rules
+- healthcare safety boundaries
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+from google.adk.tools import ToolContext
+
 from models import SearchPlan, UserQuery
 from search.mcp_retrieval import MCPHealthcareRetrievalOrchestrator
 
 
 async def retrieve_healthcare_evidence(
-    user_query: dict[str, Any],
-    search_plan: dict[str, Any],
-) -> dict:
+    tool_context: ToolContext,
+) -> dict[str, Any]:
     """
-    Retrieve healthcare evidence through MCP.
+    Retrieve healthcare evidence using planner output stored in ADK state.
+
+    Expected ADK state:
+
+        planner_output = {
+            "user_query": {...},
+            "search_plan": {...},
+        }
 
     Flow:
 
-        Google ADK
+        Google ADK workflow state
+            |
+            v
+        planner_output
             |
             v
         Healthcare Research Agent
+            |
+            v
+        retrieve_healthcare_evidence
             |
             v
         MCPHealthcareRetrievalOrchestrator
@@ -60,9 +107,6 @@ async def retrieve_healthcare_evidence(
                     |
                     +--> FHIR R4 endpoint
 
-    The returned structure remains compatible with the existing
-    ResearchAgentOutput handoff contract.
-
     Safety:
 
     - NPPES registry data does not establish provider quality.
@@ -73,54 +117,57 @@ async def retrieve_healthcare_evidence(
     """
 
     # -------------------------------------------------------------
-    # 1. Validate the user query first
+    # 1. Read planner output directly from Google ADK state
     # -------------------------------------------------------------
-    #
-    # UserQuery is the authoritative structured representation of the
-    # original request at this stage.
-    validated_user_query = UserQuery.model_validate(user_query)
+    planner_output = tool_context.state.get("planner_output")
+
+    if not planner_output:
+        raise ValueError(
+            "planner_output is missing from Google ADK workflow state."
+        )
+
+    if not isinstance(planner_output, dict):
+        raise ValueError(
+            "planner_output in Google ADK workflow state must be a dictionary."
+        )
+
+    user_query_data = planner_output.get("user_query")
+    search_plan_data = planner_output.get("search_plan")
+
+    if not user_query_data:
+        raise ValueError(
+            "planner_output.user_query is missing from Google ADK workflow state."
+        )
+
+    if not search_plan_data:
+        raise ValueError(
+            "planner_output.search_plan is missing from Google ADK workflow state."
+        )
 
     # -------------------------------------------------------------
-    # 2. Defensively normalize SearchPlan
+    # 2. Validate the authoritative structured workflow state
     # -------------------------------------------------------------
-    #
-    # The planner produces SearchPlan.intent, but the Healthcare Research
-    # Agent is an LLM-mediated tool caller. During a live ADK execution it
-    # may occasionally reconstruct the tool arguments and omit a field
-    # that appears redundant.
-    #
-    # We observed this exact case:
-    #
-    #     planner_output.search_plan.intent
-    #         == "provider_discovery"
-    #
-    # while the dictionary passed into this tool omitted `intent`.
-    #
-    # Because UserQuery.intent has already been validated and represents
-    # the same workflow intent, use it only as a recovery value when the
-    # SearchPlan field is absent.
-    #
-    # We do NOT overwrite an intent that the planner actually supplied.
-    normalized_search_plan = dict(search_plan)
+    validated_user_query = UserQuery.model_validate(user_query_data)
 
+    normalized_search_plan = dict(search_plan_data)
+
+    # Keep a defensive recovery path for legacy / malformed planner state.
+    #
+    # Unlike the earlier v0.7 implementation, this is no longer compensating
+    # for an LLM reconstructing tool arguments. It protects the workflow
+    # boundary itself in case persisted planner state is incomplete.
     if not normalized_search_plan.get("intent"):
         normalized_search_plan["intent"] = validated_user_query.intent
 
-    # SearchPlan.original_query should also remain structurally aligned
-    # with the validated user query. If an LLM-mediated tool call ever
-    # omits it, restore the original structured query rather than failing
-    # with an opaque downstream validation error.
     if not normalized_search_plan.get("original_query"):
         normalized_search_plan["original_query"] = (
             validated_user_query.model_dump(mode="json")
         )
 
-    validated_plan = SearchPlan.model_validate(
-        normalized_search_plan
-    )
+    validated_plan = SearchPlan.model_validate(normalized_search_plan)
 
     # -------------------------------------------------------------
-    # 3. Execute MCP-backed retrieval
+    # 3. Execute the existing MCP-backed retrieval pipeline
     # -------------------------------------------------------------
     orchestrator = MCPHealthcareRetrievalOrchestrator()
 
@@ -135,9 +182,9 @@ async def retrieve_healthcare_evidence(
     )
 
     # -------------------------------------------------------------
-    # 4. Return structured Research Agent output
+    # 4. Build the authoritative research output
     # -------------------------------------------------------------
-    return {
+    research_output = {
         "user_query": validated_user_query.model_dump(mode="json"),
         "search_plan": validated_plan.model_dump(mode="json"),
         "search_results": [
@@ -146,4 +193,30 @@ async def retrieve_healthcare_evidence(
         ],
         "retrieved_sources": len(results),
         "deduplicated_sources": len(results),
+    }
+
+    # -------------------------------------------------------------
+    # 5. Store deterministic research output directly in ADK state
+    # -------------------------------------------------------------
+    #
+    # v0.8 model-portability change:
+    #
+    # The MCP-backed retrieval pipeline has already produced the
+    # authoritative structured evidence. Do not require Gemini or Gemma
+    # to regenerate the same potentially large object after the tool call.
+    #
+    # The Evidence & Answer Agent can consume this state directly.
+    tool_context.state["research_output"] = research_output
+
+    # Prevent ADK from issuing another LLM completion to summarize /
+    # reconstruct this large deterministic tool result.
+    tool_context.actions.skip_summarization = True
+
+    # Keep the function response intentionally small. The full evidence
+    # payload is already available under workflow state["research_output"].
+    return {
+        "status": "research_complete",
+        "retrieved_sources": research_output["retrieved_sources"],
+        "deduplicated_sources": research_output["deduplicated_sources"],
+        "research_output_state_key": "research_output",
     }

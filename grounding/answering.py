@@ -1,22 +1,23 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from pathlib import Path
 
-from google.genai import types
 from pydantic import BaseModel, Field
 
 from grounding.citations import CitationBuilder
 from grounding.ranking import EvidenceRanker
-from llm.gemini.client import GeminiClient
+from llm.synthesis.base import SynthesisClient
+from llm.synthesis.factory import get_synthesis_client
 from models.answers import (
     GroundedAnswer,
     ProviderRecommendation,
     SearchTransparency,
 )
 from models.evidence import Evidence
-from models.query import SearchPlan, UserQuery
+from models.query import SearchIntent, SearchPlan, UserQuery
 from models.search import SourceType
 
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "agents" / "prompts" / "grounded_answer.md"
@@ -58,22 +59,24 @@ class GroundedAnswerGenerator:
 
         Selected Evidence
             -> deterministic citations
-            -> restricted Gemini context
+            -> restricted model context
             -> structured draft
             -> provider validation
             -> citation validation
+            -> deterministic provider recommendations
             -> deterministic final model
 
-    Gemini cannot introduce new providers or citation URLs.
+    The configured synthesis model cannot introduce new providers or
+    citation URLs into final recommendations.
     """
 
     def __init__(
         self,
-        gemini: GeminiClient | None = None,
+        synthesis: SynthesisClient | None = None,
         ranker: EvidenceRanker | None = None,
         citation_builder: CitationBuilder | None = None,
     ) -> None:
-        self.gemini = gemini or GeminiClient()
+        self.synthesis = synthesis or get_synthesis_client()
         self.ranker = ranker or EvidenceRanker()
         self.citation_builder = citation_builder or CitationBuilder()
 
@@ -88,19 +91,86 @@ class GroundedAnswerGenerator:
         deduplicated_sources: int,
     ) -> GroundedAnswer:
         """
-        Generate the final grounded answer.
+        Synchronous compatibility wrapper.
 
-        Only selected evidence is passed to Gemini.
+        New async Google ADK code should call `agenerate()` directly.
         """
 
-        selected_evidence = [evidence for evidence in ranked_evidence if evidence.selected]
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(
+                self.agenerate(
+                    user_query=user_query,
+                    plan=plan,
+                    ranked_evidence=ranked_evidence,
+                    retrieved_sources=retrieved_sources,
+                    deduplicated_sources=deduplicated_sources,
+                )
+            )
+
+        raise RuntimeError(
+            "GroundedAnswerGenerator.generate() cannot run inside an "
+            "active event loop. Use `await agenerate(...)` instead."
+        )
+
+    async def agenerate(
+        self,
+        user_query: UserQuery,
+        plan: SearchPlan,
+        ranked_evidence: list[Evidence],
+        retrieved_sources: int,
+        deduplicated_sources: int,
+    ) -> GroundedAnswer:
+        """
+        Generate the final grounded answer using the configured model provider.
+
+        Only selected evidence is passed to the synthesis model.
+        """
+
+        selected_evidence = [
+            evidence
+            for evidence in ranked_evidence
+            if evidence.selected
+        ]
 
         if not selected_evidence:
             raise ValueError(
-                "Grounded answer generation requires at least one selected evidence item."
+                "Grounded answer generation requires at least one "
+                "selected evidence item."
             )
 
-        citations = self.citation_builder.build(ranked_evidence)
+        citations = self.citation_builder.build(
+            ranked_evidence
+        )
+
+        # ---------------------------------------------------------
+        # Safety-critical provider discovery
+        # ---------------------------------------------------------
+        #
+        # Provider discovery does not require another LLM completion.
+        #
+        # The selected evidence already contains the authoritative
+        # provider registry records and supporting scientific sources.
+        # Constructing this answer deterministically:
+        #
+        # - prevents unsupported provider claims,
+        # - prevents cross-provider citation leakage,
+        # - keeps Gemini and Gemma on the same grounding path,
+        # - avoids asking a local model to regenerate a large evidence
+        #   payload,
+        # - preserves the rule: No evidence -> no claim.
+        #
+        # Other search intents may continue to use the configured
+        # synthesis provider.
+        if user_query.intent == SearchIntent.PROVIDER_DISCOVERY:
+            return self._generate_provider_discovery_answer(
+                plan=plan,
+                selected_evidence=selected_evidence,
+                citations=citations,
+                retrieved_sources=retrieved_sources,
+                deduplicated_sources=deduplicated_sources,
+            )
 
         evidence_context = self._build_evidence_context(
             selected_evidence=selected_evidence,
@@ -123,26 +193,26 @@ Create the grounded answer now.
 
 Important:
 - Use only the supplied selected evidence.
-- Use citation IDs such as [C1] directly in answer text and reasons.
+- Use citation IDs such as [C1] directly in answer text.
 - Never invent providers.
 - Never invent citations.
+- PubMed evidence is general scientific evidence and must not be
+  converted into provider-specific claims.
+- Provider-specific claims may only use facts explicitly present in
+  that provider's selected registry evidence.
+- Do not infer active licensure, good standing, board certification,
+  clinical quality, anxiety expertise, sedation availability, or
+  provider-specific services unless the supplied evidence explicitly
+  establishes that claim.
+- The application will construct final provider recommendation reasons
+  deterministically from provider evidence.
 - Return only the requested structured response.
 """
 
-        response = self.gemini.client.models.generate_content(
-            model=self.gemini.model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type=("application/json"),
-                response_schema=(DraftGroundedAnswer),
-                temperature=0.1,
-            ),
+        draft = await self.synthesis.generate(
+            prompt=prompt,
+            schema=DraftGroundedAnswer,
         )
-
-        if not response.text:
-            raise RuntimeError("Gemini returned an empty grounded-answer response.")
-
-        draft = DraftGroundedAnswer.model_validate_json(response.text)
 
         self._validate_citation_references(
             draft=draft,
@@ -151,20 +221,152 @@ Important:
 
         recommendations = self._finalize_recommendations(
             draft=draft,
-            selected_evidence=(selected_evidence),
+            selected_evidence=selected_evidence,
         )
 
         transparency = SearchTransparency(
             generated_queries=len(plan.generated_queries),
-            retrieved_sources=(retrieved_sources),
-            deduplicated_sources=(deduplicated_sources),
+            retrieved_sources=retrieved_sources,
+            deduplicated_sources=deduplicated_sources,
             selected_sources=len(selected_evidence),
         )
 
-        # Finalize limitations semantically so Gemini-generated
-        # evidence-gap warnings are not duplicated by our standard
-        # safety limitations.
-        limitations = self._finalize_limitations(draft.limitations)
+        limitations = self._finalize_limitations(
+            draft.limitations
+        )
+
+        return GroundedAnswer(
+            answer=draft.answer,
+            recommendations=recommendations,
+            citations=citations,
+            transparency=transparency,
+            limitations=limitations,
+        )
+
+    def _generate_provider_discovery_answer(
+        self,
+        *,
+        plan: SearchPlan,
+        selected_evidence: list[Evidence],
+        citations: list,
+        retrieved_sources: int,
+        deduplicated_sources: int,
+    ) -> GroundedAnswer:
+        """
+        Construct provider-discovery answers deterministically.
+
+        Provider identity and location come only from selected provider
+        registry evidence.
+
+        PubMed evidence is surfaced only as general scientific context.
+        It is never converted into a claim about a specific provider.
+
+        FHIR public test-server records are not part of the selected
+        provider-discovery grounding context.
+        """
+
+        provider_evidence = [
+            evidence
+            for evidence in selected_evidence
+            if evidence.result.source_type == SourceType.PROVIDER
+        ]
+
+        scientific_evidence = [
+            evidence
+            for evidence in selected_evidence
+            if evidence.result.source_type == SourceType.PUBMED
+        ]
+
+        if not provider_evidence:
+            raise ValueError(
+                "Provider discovery requires selected provider evidence."
+            )
+
+        answer_parts: list[str] = [
+            (
+                "The provider registry evidence identified the following "
+                "candidate providers for the requested specialty and "
+                "location:"
+            )
+        ]
+
+        provider_lines: list[str] = []
+
+        for evidence in provider_evidence[:3]:
+            result = evidence.result
+
+            citation_id = self._citation_id_for_evidence(
+                target=evidence,
+                selected_evidence=selected_evidence,
+            )
+
+            name = result.provider_name or result.title
+
+            if result.location:
+                provider_lines.append(
+                    f"{name} — NPPES reports a location at "
+                    f"{result.location} [{citation_id}]."
+                )
+            else:
+                provider_lines.append(
+                    f"{name} appears in the selected NPPES "
+                    f"provider evidence [{citation_id}]."
+                )
+
+        answer_parts.append(
+            " ".join(provider_lines)
+        )
+
+        if scientific_evidence:
+            scientific_ids = [
+                self._citation_id_for_evidence(
+                    target=evidence,
+                    selected_evidence=selected_evidence,
+                )
+                for evidence in scientific_evidence
+            ]
+
+            formatted_ids = ", ".join(
+                f"[{citation_id}]"
+                for citation_id in scientific_ids
+            )
+
+            answer_parts.append(
+                "Selected PubMed sources provide general scientific "
+                "context relevant to the healthcare question "
+                f"{formatted_ids}. These sources do not establish that "
+                "any individual provider offers a particular anxiety-"
+                "management, behavior-guidance, sedation, or other "
+                "provider-specific service."
+            )
+
+        answer_parts.append(
+            "These are evidence-supported candidates rather than a "
+            "ranking of clinical quality. Current professional licensure, "
+            "good standing, clinical quality, and provider-specific "
+            "services should be independently verified with authoritative "
+            "sources."
+        )
+
+        draft = DraftGroundedAnswer(
+            answer="\n\n".join(answer_parts),
+            recommendations=[],
+            limitations=[],
+        )
+
+        recommendations = self._finalize_recommendations(
+            draft=draft,
+            selected_evidence=selected_evidence,
+        )
+
+        transparency = SearchTransparency(
+            generated_queries=len(plan.generated_queries),
+            retrieved_sources=retrieved_sources,
+            deduplicated_sources=deduplicated_sources,
+            selected_sources=len(selected_evidence),
+        )
+
+        limitations = self._finalize_limitations([])
 
         return GroundedAnswer(
             answer=draft.answer,
@@ -218,13 +420,15 @@ Important:
         selected_evidence: list[Evidence],
     ) -> list[ProviderRecommendation]:
         """
-        Convert Gemini's draft provider selections into deterministic
-        ProviderRecommendation objects.
+        Build provider recommendations deterministically.
 
-        Gemini may NOT introduce providers outside selected evidence.
+        The synthesis model may mention only providers present in selected
+        provider evidence, but final provider ordering, reasons, locations,
+        credentials, services, citations, and confidence are owned by code.
 
-        Provider location, identifiers, and confidence come from the
-        retrieved evidence rather than Gemini.
+        This prevents model-generated provider reasons from attaching one
+        provider to another provider's citation or from introducing claims
+        outside the source-specific evidence boundary.
         """
 
         provider_evidence = [
@@ -233,94 +437,105 @@ Important:
             if evidence.result.source_type == SourceType.PROVIDER
         ]
 
-        allowed = {
-            self._normalize_name(evidence.result.provider_name or evidence.result.title): evidence
+        allowed_names = {
+            self._normalize_name(
+                evidence.result.provider_name
+                or evidence.result.title
+            )
             for evidence in provider_evidence
         }
 
-        recommendations: list[ProviderRecommendation] = []
-
-        seen_names: set[str] = set()
-
+        # Validate any provider names emitted by the synthesis model.
+        # They are not used to construct the final recommendation list.
         for draft_recommendation in draft.recommendations:
-            normalized_name = self._normalize_name(draft_recommendation.name)
+            normalized_name = self._normalize_name(
+                draft_recommendation.name
+            )
 
-            evidence = allowed.get(normalized_name)
-
-            if evidence is None:
+            if normalized_name not in allowed_names:
                 raise ValueError(
-                    "Gemini attempted to recommend "
-                    "a provider that was not present "
-                    "in selected evidence: "
+                    "Synthesis model attempted to recommend a provider "
+                    "that was not present in selected evidence: "
                     f"{draft_recommendation.name}"
                 )
 
-            if normalized_name in seen_names:
-                continue
+        recommendations: list[ProviderRecommendation] = []
 
-            seen_names.add(normalized_name)
-
+        for evidence in provider_evidence[:3]:
             result = evidence.result
-
-            # NPI is an identifier, not a professional credential.
-            # Therefore we do not place it in `credentials`.
-            #
-            # We also leave services empty because NPPES does not
-            # establish provider-specific anxiety/sedation services.
-            recommendations.append(
-                ProviderRecommendation(
-                    name=(result.provider_name or result.title),
-                    location=result.location,
-                    credentials=[],
-                    services=[],
-                    reasons_selected=(draft_recommendation.reasons_selected),
-                    confidence=(self.ranker.total_score(evidence)),
-                )
-            )
-
-        # If Gemini returned fewer provider recommendations than the
-        # selected provider evidence, safely backfill using only
-        # deterministic provider evidence.
-        for evidence in provider_evidence:
-            if len(recommendations) >= 3:
-                break
-
-            result = evidence.result
-
-            name = result.provider_name or result.title
-
-            normalized_name = self._normalize_name(name)
-
-            if normalized_name in seen_names:
-                continue
 
             citation_id = self._citation_id_for_evidence(
                 target=evidence,
-                selected_evidence=(selected_evidence),
+                selected_evidence=selected_evidence,
             )
 
             recommendations.append(
                 ProviderRecommendation(
-                    name=name,
+                    name=(
+                        result.provider_name
+                        or result.title
+                    ),
                     location=result.location,
                     credentials=[],
                     services=[],
-                    reasons_selected=[
-                        (
-                            "Included because the provider "
-                            "appears in the selected NPPES "
-                            "provider evidence for the requested "
-                            "specialty and location "
-                            f"[{citation_id}]."
+                    reasons_selected=(
+                        self._build_provider_reasons(
+                            evidence=evidence,
+                            citation_id=citation_id,
                         )
-                    ],
-                    confidence=(self.ranker.total_score(evidence)),
+                    ),
+                    confidence=self.ranker.total_score(
+                        evidence
+                    ),
                 )
             )
 
-            seen_names.add(normalized_name)
+        return recommendations
 
-        return recommendations[:3]
+    @staticmethod
+    def _build_provider_reasons(
+        evidence: Evidence,
+        citation_id: str,
+    ) -> list[str]:
+        """
+        Build provider-specific reasons only from that provider's evidence.
+
+        NPPES is administrative registry evidence. These reasons deliberately
+        avoid claims about clinical quality, board certification, active
+        licensure, anxious-child expertise, or service availability.
+        """
+
+        result = evidence.result
+
+        reasons = [
+            (
+                "Included because this provider appears in the selected "
+                f"NPPES provider evidence [{citation_id}]."
+            )
+        ]
+
+        if result.location:
+            reasons.append(
+                "NPPES reports a practice location at "
+                f"{result.location} [{citation_id}]."
+            )
+
+        npi = result.metadata.get("npi")
+
+        if npi:
+            reasons.append(
+                f"NPPES reports NPI {npi} [{citation_id}]."
+            )
+
+        taxonomy = result.metadata.get("taxonomy")
+
+        if taxonomy:
+            reasons.append(
+                "NPPES reports taxonomy metadata: "
+                f"{taxonomy} [{citation_id}]."
+            )
+
+        return reasons
 
     @staticmethod
     def _citation_id_for_evidence(
@@ -393,7 +608,7 @@ Important:
         invalid = referenced - valid_ids
 
         if invalid:
-            raise ValueError(f"Gemini referenced invalid citation IDs: {sorted(invalid)}")
+            raise ValueError(f"Synthesis model referenced invalid citation IDs: {sorted(invalid)}")
 
     @staticmethod
     def _finalize_limitations(
@@ -402,7 +617,7 @@ Important:
         """
         Return concise, non-duplicative limitations.
 
-        Gemini normally produces evidence-specific limitations.
+        The synthesis model normally produces evidence-specific limitations.
 
         We preserve those limitations and add a standard safety
         limitation only when the corresponding evidence-gap category
@@ -425,7 +640,7 @@ Important:
         # CATEGORY 1 — Provider registry / verification limitations
         # ---------------------------------------------------------
         #
-        # If Gemini already discusses NPPES/provider registry limits,
+        # If the synthesis model already discusses NPPES/provider registry limits,
         # clinical quality, board certification, or licensure, we do
         # not add another generic NPPES warning.
         provider_registry_present = any(
