@@ -8,22 +8,19 @@ The project explores the evolution from traditional retrieval toward agentic hea
 
 ## Current Release
 
-**v0.8 — Gemini + Gemma / Ollama**
+**v0.9 — Generalized Query Planning + Dynamic Retrieval + GUI**
 
-v0.8 introduces model-runtime portability while preserving the same Google ADK three-agent healthcare architecture.
+v0.9 removes flagship-query assumptions from planning and retrieval so the same three-agent Google ADK workflow can operate across supported healthcare questions rather than being configured around Houston pediatric dentistry.
 
-The reasoning agents can now use either:
+The planner now infers intent, optional location, optional specialty, and dynamic query fan-out. Retrieval follows that structured planner state and routes to NPPES, PubMed, or explicit FHIR interoperability retrieval.
 
-- **Gemini** — hosted Google model path
-- **Gemma + Ollama** — local Gemma path through LiteLLM
+v0.9 also adds one Streamlit UI for both **Gemini** and **Gemma + Ollama**.
 
-Both paths reuse the same Google ADK workflow, MCP healthcare tools, NPPES/PubMed/FHIR retrieval, evidence ranking, deterministic citations, and healthcare safety boundaries.
-
-For provider discovery, final provider claims are assembled deterministically from selected evidence. Models continue to plan and invoke tools, while deterministic code owns the safety-critical provider claim boundary.
+Provider discovery remains evidence-restricted. NPPES supports provider identity, NPI, taxonomy, and reported location; it does not establish that a provider is “best”, board certified, actively licensed, in good standing, or offers a requested service.
 
 > **No evidence → no claim.**
 
-The v0.8 acceptance scope is the flagship provider-discovery workflow. v0.8 does not claim that every intent has been proven portable or that Gemini and Gemma have equivalent runtime characteristics.
+The original Houston pediatric-dentist question remains an acceptance/regression example. It is not application configuration.
 
 ---
 
@@ -217,13 +214,63 @@ v0.8  PORT
       Gemini + Gemma / Ollama
                     |
                     v
-v0.9  CONTAINERIZE
-      Docker
+v0.9  GENERALIZE
+      Dynamic Planning + Retrieval + GUI
                     |
                     v
-v1.0  MEASURE
+v1.0  CONTAINERIZE
+      Dockerized Reproducible Demo Runtime
+                    |
+                    v
+v1.1  MEASURE
       Evaluation Benchmark
+                    |
+                    v
+v1.2  ORCHESTRATE
+      Kubernetes / GKE
+                    |
+                    v
+v1.3  OBSERVE
+      OpenTelemetry
+                    |
+                    v
+v1.4  SECURE
+      Security
+                    |
+                    v
+v2.0  FRAMEWORK
+      Reusable Agentic Healthcare Framework
 ```
+
+---
+
+# v0.9 — Generalized Query Planning + Dynamic Retrieval + GUI
+
+The flagship query is a test case, not application configuration.
+
+```text
+Any Supported Healthcare Question
+        |
+        v
+Search Planner Agent
+(intent + optional location + optional specialty + query fan-out)
+        |
+        v
+Healthcare Research Agent
+   /        |        \
+NPPES     PubMed     FHIR
+   \        |        /
+        v
+Evidence & Answer Agent
+(authority-aware ranking + deterministic provider safety + citations)
+        |
+        v
+One Streamlit UI
+   /          \
+Gemini     Gemma/Ollama
+```
+
+Run the GUI with `./scripts/demo-local.sh gemini` or `./scripts/demo-local.sh gemma`. Run live acceptance with `./scripts/test-ui.sh gemini` or `./scripts/test-ui.sh gemma`. See `examples/v0.9-acceptance.md`.
 
 ---
 

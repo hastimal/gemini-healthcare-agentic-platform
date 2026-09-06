@@ -1,8 +1,5 @@
 """
-Regression tests for the async MCP healthcare retrieval orchestrator.
-
-v0.7 preserves deterministic NPPES and PubMed routing while adding
-explicit, opt-in FHIR interoperability retrieval.
+v0.9 regression tests for dynamic MCP healthcare retrieval.
 """
 
 import pytest
@@ -37,17 +34,16 @@ class FakeProviderClient:
                 "limit": limit,
             }
         )
-
         return [
             SearchResult(
                 source_type=SourceType.PROVIDER,
-                title="TEST PEDIATRIC DENTIST DDS",
+                title=f"TEST {taxonomy_description.upper()}",
                 url="https://example.com/provider/123",
-                snippet="Pediatric dentist in Houston",
-                provider_name="TEST PEDIATRIC DENTIST DDS",
-                location="Houston, TX",
+                snippet=f"{taxonomy_description} in {city}, {state}",
+                provider_name=f"TEST {taxonomy_description.upper()}",
+                location=f"{city}, {state}",
                 retrieved_by="nppes",
-                query_used="Dentist, Pediatric Dentistry",
+                query_used=taxonomy_description,
                 metadata={"npi": "1234567890"},
             )
         ]
@@ -57,25 +53,15 @@ class FakePubMedClient:
     def __init__(self):
         self.calls = []
 
-    async def search(
-        self,
-        query,
-        max_results=5,
-    ):
-        self.calls.append(
-            {
-                "query": query,
-                "max_results": max_results,
-            }
-        )
-
+    async def search(self, query, max_results=5):
+        self.calls.append({"query": query, "max_results": max_results})
         return [
             SearchResult(
                 source_type=SourceType.PUBMED,
-                title="Pediatric Dental Anxiety Study",
+                title=f"Research: {query}",
                 url="https://pubmed.ncbi.nlm.nih.gov/12345678/",
-                snippet="Evidence about pediatric dental anxiety.",
-                content="Biomedical evidence about anxiety management.",
+                snippet="Biomedical evidence.",
+                content="Biomedical evidence.",
                 retrieved_by="pubmed",
                 query_used=query,
                 metadata={"pmid": "12345678"},
@@ -87,6 +73,19 @@ class FakeFHIRClient:
     def __init__(self):
         self.calls = []
 
+    def _result(self, resource_type):
+        return [
+            SearchResult(
+                source_type=SourceType.FHIR,
+                title=f"FHIR {resource_type} Example",
+                url=f"https://example.com/fhir/{resource_type}/123",
+                snippet="FHIR interoperability example.",
+                retrieved_by="fhir",
+                query_used=resource_type,
+                metadata={"fhir_resource_type": resource_type},
+            )
+        ]
+
     async def search_practitioner_roles(
         self,
         specialty=None,
@@ -95,234 +94,299 @@ class FakeFHIRClient:
         limit=10,
     ):
         self.calls.append(
-            {
-                "specialty": specialty,
-                "practitioner": practitioner,
-                "organization": organization,
-                "limit": limit,
-            }
+            ("PractitionerRole", specialty, practitioner, organization, limit)
         )
+        return self._result("PractitionerRole")
 
-        return [
-            SearchResult(
-                source_type=SourceType.FHIR,
-                title="FHIR PractitionerRole Example",
-                url="https://example.com/fhir/PractitionerRole/123",
-                snippet=(
-                    "FHIR interoperability example linking practitioner, "
-                    "specialty, organization, and location."
-                ),
-                retrieved_by="fhir",
-                query_used="FHIR PractitionerRole pediatric dentistry",
-                metadata={
-                    "fhir_resource_type": "PractitionerRole",
-                    "fhir_resource_id": "123",
-                },
+    async def search_practitioners(self, name=None, limit=10):
+        self.calls.append(("Practitioner", name, limit))
+        return self._result("Practitioner")
+
+    async def search_organizations(self, name=None, limit=10):
+        self.calls.append(("Organization", name, limit))
+        return self._result("Organization")
+
+    async def search_locations(
+        self,
+        name=None,
+        city=None,
+        state=None,
+        limit=10,
+    ):
+        self.calls.append(("Location", name, city, state, limit))
+        return self._result("Location")
+
+    async def search_healthcare_services(self, name=None, limit=10):
+        self.calls.append(("HealthcareService", name, limit))
+        return self._result("HealthcareService")
+
+
+def make_plan(user_query, generated_queries):
+    return SearchPlan(
+        original_query=user_query,
+        intent=user_query.intent,
+        generated_queries=generated_queries,
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("location", "specialty", "city", "state"),
+    [
+        ("Dallas, TX", "Cardiology", "Dallas", "TX"),
+        ("Austin, Texas", "Neurology", "Austin", "TX"),
+        ("Chicago, IL", "Oncology", "Chicago", "IL"),
+    ],
+)
+async def test_provider_discovery_uses_dynamic_location_and_specialty(
+    location,
+    specialty,
+    city,
+    state,
+):
+    user_query = UserQuery(
+        text=f"Find {specialty} providers in {location}",
+        location=location,
+        specialty=specialty,
+        intent=SearchIntent.PROVIDER_DISCOVERY,
+    )
+    plan = make_plan(
+        user_query,
+        [
+            SearchQuery(
+                query=f"{specialty} {location}",
+                purpose="Identify local healthcare providers.",
+                priority=1,
             )
-        ]
-
-
-def _user_query() -> UserQuery:
-    return UserQuery(
-        text=(
-            "Find pediatric dentists in Houston for a child "
-            "with dental anxiety."
-        ),
-        location="Houston, TX",
-        specialty="Pediatric Dentistry",
-        intent=SearchIntent.PROVIDER_DISCOVERY,
-    )
-
-
-@pytest.mark.asyncio
-async def test_mcp_retrieval_routes_provider_research_and_fhir_queries():
-    """
-    Provider discovery executes once, biomedical queries go to PubMed,
-    and explicit FHIR interoperability queries go to FHIR.
-    """
-
-    user_query = _user_query()
-
-    plan = SearchPlan(
-        original_query=user_query,
-        intent=SearchIntent.PROVIDER_DISCOVERY,
-        generated_queries=[
-            SearchQuery(
-                query="pediatric dentist Houston TX",
-                purpose="Identify local pediatric dental providers.",
-                priority=1,
-            ),
-            SearchQuery(
-                query="pediatric dental anxiety behavior guidance",
-                purpose=(
-                    "Retrieve biomedical evidence about pediatric "
-                    "dental anxiety."
-                ),
-                priority=2,
-            ),
-            SearchQuery(
-                query="FHIR PractitionerRole pediatric dentistry",
-                purpose=(
-                    "Retrieve FHIR interoperability relationships among "
-                    "practitioners, specialties, organizations, and locations."
-                ),
-                priority=3,
-            ),
         ],
     )
 
-    provider_client = FakeProviderClient()
-    pubmed_client = FakePubMedClient()
-    fhir_client = FakeFHIRClient()
+    provider = FakeProviderClient()
+    pubmed = FakePubMedClient()
+    fhir = FakeFHIRClient()
+    orchestrator = MCPHealthcareRetrievalOrchestrator(provider, pubmed, fhir)
 
-    orchestrator = MCPHealthcareRetrievalOrchestrator(
-        provider_client=provider_client,
-        pubmed_client=pubmed_client,
-        fhir_client=fhir_client,
-    )
+    results = await orchestrator.retrieve(user_query=user_query, plan=plan)
 
-    results = await orchestrator.retrieve(
-        user_query=user_query,
-        plan=plan,
-        city="Houston",
-        state="TX",
-        provider_limit=10,
-        pubmed_limit=3,
-        fhir_limit=2,
-    )
-
-    assert len(provider_client.calls) == 1
-    assert provider_client.calls[0] == {
-        "taxonomy_description": "Pediatric Dentistry",
-        "city": "Houston",
-        "state": "TX",
-        "limit": 10,
-    }
-
-    assert len(pubmed_client.calls) == 1
-    assert pubmed_client.calls[0] == {
-        "query": "pediatric dental anxiety behavior guidance",
-        "max_results": 3,
-    }
-
-    assert len(fhir_client.calls) == 1
-    assert fhir_client.calls[0] == {
-        "specialty": "Pediatric Dentistry",
-        "practitioner": None,
-        "organization": None,
-        "limit": 2,
-    }
-
-    source_types = {
-        result.source_type
-        for result in results
-    }
-
-    assert SourceType.PROVIDER in source_types
-    assert SourceType.PUBMED in source_types
-    assert SourceType.FHIR in source_types
+    assert provider.calls == [
+        {
+            "taxonomy_description": specialty,
+            "city": city,
+            "state": state,
+            "limit": 10,
+        }
+    ]
+    assert pubmed.calls == []
+    assert fhir.calls == []
+    assert any(r.source_type == SourceType.PROVIDER for r in results)
 
 
 @pytest.mark.asyncio
-async def test_mcp_retrieval_does_not_call_fhir_without_explicit_fhir_query():
-    """
-    Ordinary provider and biomedical queries must not trigger FHIR.
-
-    This protects the evidence pipeline from unrelated public test-server
-    records entering normal provider discovery.
-    """
-
-    user_query = _user_query()
-
-    plan = SearchPlan(
-        original_query=user_query,
-        intent=SearchIntent.PROVIDER_DISCOVERY,
-        generated_queries=[
+async def test_biomedical_research_routes_to_pubmed_without_provider_location():
+    user_query = UserQuery(
+        text="What does research say about childhood dental anxiety?",
+        intent=SearchIntent.BIOMEDICAL_RESEARCH,
+    )
+    plan = make_plan(
+        user_query,
+        [
             SearchQuery(
-                query="pediatric dentist Houston TX",
-                purpose="Identify local pediatric dental providers.",
+                query="childhood dental anxiety systematic review",
+                purpose="Retrieve biomedical research.",
                 priority=1,
-            ),
-            SearchQuery(
-                query="pediatric dental anxiety behavior guidance",
-                purpose="Retrieve biomedical evidence.",
-                priority=2,
-            ),
+            )
         ],
     )
 
-    provider_client = FakeProviderClient()
-    pubmed_client = FakePubMedClient()
-    fhir_client = FakeFHIRClient()
+    provider = FakeProviderClient()
+    pubmed = FakePubMedClient()
+    fhir = FakeFHIRClient()
+    orchestrator = MCPHealthcareRetrievalOrchestrator(provider, pubmed, fhir)
 
-    orchestrator = MCPHealthcareRetrievalOrchestrator(
-        provider_client=provider_client,
-        pubmed_client=pubmed_client,
-        fhir_client=fhir_client,
-    )
+    results = await orchestrator.retrieve(user_query=user_query, plan=plan)
 
-    results = await orchestrator.retrieve(
-        user_query=user_query,
-        plan=plan,
-        city="Houston",
-        state="TX",
-        provider_limit=10,
-        pubmed_limit=3,
-        fhir_limit=2,
-    )
-
-    assert len(provider_client.calls) == 1
-    assert len(pubmed_client.calls) == 1
-    assert len(fhir_client.calls) == 0
-
-    assert all(
-        result.source_type != SourceType.FHIR
-        for result in results
-    )
+    assert provider.calls == []
+    assert len(pubmed.calls) == 1
+    assert fhir.calls == []
+    assert any(r.source_type == SourceType.PUBMED for r in results)
 
 
 @pytest.mark.asyncio
-async def test_mcp_retrieval_calls_fhir_only_once():
-    """
-    Multiple FHIR-oriented generated queries should produce only one
-    FHIR lookup during the v0.7 workflow.
-    """
-
-    user_query = _user_query()
-
-    plan = SearchPlan(
-        original_query=user_query,
-        intent=SearchIntent.PROVIDER_DISCOVERY,
-        generated_queries=[
+async def test_health_information_routes_to_pubmed_without_provider_assumptions():
+    user_query = UserQuery(
+        text="What is atrial fibrillation?",
+        intent=SearchIntent.HEALTH_INFORMATION,
+    )
+    plan = make_plan(
+        user_query,
+        [
             SearchQuery(
-                query="FHIR PractitionerRole pediatric dentistry",
+                query="atrial fibrillation overview",
+                purpose="Retrieve health information evidence.",
+                priority=1,
+            )
+        ],
+    )
+
+    provider = FakeProviderClient()
+    pubmed = FakePubMedClient()
+    fhir = FakeFHIRClient()
+    orchestrator = MCPHealthcareRetrievalOrchestrator(provider, pubmed, fhir)
+
+    await orchestrator.retrieve(user_query=user_query, plan=plan)
+
+    assert provider.calls == []
+    assert len(pubmed.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_explicit_fhir_practitioner_role_does_not_require_houston():
+    user_query = UserQuery(
+        text="Explain FHIR PractitionerRole",
+        intent=SearchIntent.HEALTH_INFORMATION,
+    )
+    plan = make_plan(
+        user_query,
+        [
+            SearchQuery(
+                query="FHIR PractitionerRole",
                 purpose="Retrieve FHIR interoperability evidence.",
                 priority=1,
-            ),
-            SearchQuery(
-                query="FHIR healthcare organization structure",
-                purpose="Retrieve standardized healthcare data.",
-                priority=2,
-            ),
+            )
         ],
     )
 
-    provider_client = FakeProviderClient()
-    pubmed_client = FakePubMedClient()
-    fhir_client = FakeFHIRClient()
+    provider = FakeProviderClient()
+    pubmed = FakePubMedClient()
+    fhir = FakeFHIRClient()
+    orchestrator = MCPHealthcareRetrievalOrchestrator(provider, pubmed, fhir)
+
+    results = await orchestrator.retrieve(user_query=user_query, plan=plan)
+
+    assert provider.calls == []
+    assert fhir.calls == [
+        ("PractitionerRole", None, None, None, 3)
+    ]
+    assert any(r.source_type == SourceType.FHIR for r in results)
+
+
+@pytest.mark.asyncio
+async def test_fhir_healthcare_service_routes_to_healthcare_service_tool():
+    user_query = UserQuery(
+        text="Show FHIR HealthcareService examples",
+        intent=SearchIntent.HEALTH_INFORMATION,
+    )
+    plan = make_plan(
+        user_query,
+        [
+            SearchQuery(
+                query="FHIR HealthcareService",
+                purpose="Retrieve FHIR healthcare service interoperability evidence.",
+                priority=1,
+            )
+        ],
+    )
+
+    fhir = FakeFHIRClient()
+    orchestrator = MCPHealthcareRetrievalOrchestrator(
+        FakeProviderClient(),
+        FakePubMedClient(),
+        fhir,
+    )
+
+    await orchestrator.retrieve(user_query=user_query, plan=plan)
+
+    assert ("HealthcareService", None, 3) in fhir.calls
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "intent",
+    [
+        SearchIntent.CARE_PROGRAM_DISCOVERY,
+        SearchIntent.CLINICAL_TRIALS,
+    ],
+)
+async def test_unsupported_intents_fail_explicitly_instead_of_misrouting(intent):
+    user_query = UserQuery(
+        text="Healthcare query requiring an unsupported connector",
+        intent=intent,
+    )
+    plan = make_plan(
+        user_query,
+        [
+            SearchQuery(
+                query="unsupported healthcare retrieval",
+                purpose="Retrieve relevant evidence.",
+                priority=1,
+            )
+        ],
+    )
+
+    provider = FakeProviderClient()
+    orchestrator = MCPHealthcareRetrievalOrchestrator(
+        provider,
+        FakePubMedClient(),
+        FakeFHIRClient(),
+    )
+
+    with pytest.raises(NotImplementedError, match=intent.value):
+        await orchestrator.retrieve(user_query=user_query, plan=plan)
+
+    assert provider.calls == []
+
+
+@pytest.mark.asyncio
+async def test_provider_discovery_requires_location():
+    user_query = UserQuery(
+        text="Find cardiologists",
+        specialty="Cardiology",
+        intent=SearchIntent.PROVIDER_DISCOVERY,
+    )
+    plan = make_plan(
+        user_query,
+        [
+            SearchQuery(
+                query="cardiologists",
+                purpose="Identify healthcare providers.",
+                priority=1,
+            )
+        ],
+    )
 
     orchestrator = MCPHealthcareRetrievalOrchestrator(
-        provider_client=provider_client,
-        pubmed_client=pubmed_client,
-        fhir_client=fhir_client,
+        FakeProviderClient(),
+        FakePubMedClient(),
+        FakeFHIRClient(),
     )
 
-    await orchestrator.retrieve(
-        user_query=user_query,
-        plan=plan,
-        city="Houston",
-        state="TX",
-        fhir_limit=3,
+    with pytest.raises(ValueError, match="location"):
+        await orchestrator.retrieve(user_query=user_query, plan=plan)
+
+
+@pytest.mark.asyncio
+async def test_intent_mismatch_is_rejected():
+    user_query = UserQuery(
+        text="Research childhood dental anxiety",
+        intent=SearchIntent.BIOMEDICAL_RESEARCH,
+    )
+    plan = SearchPlan(
+        original_query=user_query,
+        intent=SearchIntent.PROVIDER_DISCOVERY,
+        generated_queries=[
+            SearchQuery(
+                query="childhood dental anxiety",
+                purpose="Research evidence.",
+                priority=1,
+            )
+        ],
     )
 
-    assert len(fhir_client.calls) == 1
+    orchestrator = MCPHealthcareRetrievalOrchestrator(
+        FakeProviderClient(),
+        FakePubMedClient(),
+        FakeFHIRClient(),
+    )
+
+    with pytest.raises(ValueError, match="intent mismatch"):
+        await orchestrator.retrieve(user_query=user_query, plan=plan)

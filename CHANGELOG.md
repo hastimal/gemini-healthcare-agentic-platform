@@ -6,6 +6,49 @@ This project is developed incrementally. Each milestone introduces a capability 
 
 ---
 
+## [v0.9.0] - 2026-09-06
+
+### Generalized Query Planning + Dynamic Retrieval + GUI
+
+#### Why
+
+Interactive GUI testing exposed hidden Houston and Pediatric Dentistry assumptions inherited from the flagship acceptance query. v0.9 makes that question a regression case rather than application configuration.
+
+#### Added
+
+- generalized Google ADK planner output: intent, optional location, optional specialty, and generated queries
+- deterministic query-plan construction without a hidden direct Gemini dependency
+- planner-state-driven retrieval
+- U.S. provider-location parsing
+- deterministic NPPES specialty resolution for common wording differences
+- intent-aware NPPES, PubMed, and explicit FHIR routing
+- one Streamlit UI for Gemini and Gemma/Ollama
+- structured planner/research/answer observability
+- live Streamlit E2E acceptance harness
+- generalized planner, location, retrieval, specialty, and UI regression tests
+
+#### Boundaries
+
+Provider discovery returns evidence-supported candidates; it does not establish “best” provider ranking, board certification, active licensure, good standing, clinical quality, or provider-specific service availability. `CARE_PROGRAM_DISCOVERY` and `CLINICAL_TRIALS` remain modeled intents but are not claimed as implemented retrieval paths in v0.9.
+
+#### Acceptance
+
+```text
+Deterministic: 85 passed, 5 skipped, 1 dependency warning
+
+Scenario                         Gemini   Gemma
+Dallas Cardiology                PASS     PASS
+Austin Neurology                 PASS     PASS
+Biomedical research              PASS     PASS
+FHIR PractitionerRole            PASS     PASS
+Houston pediatric dentistry      PASS     PASS
+                                 5/5      5/5
+```
+
+Manual Streamlit checks were also completed for both model paths. Observed local durations are diagnostics, not benchmarks. Known framework/dependency deprecation warnings remain non-blocking.
+
+---
+
 ## [v0.8.0] - 2026-09-06
 
 ### Gemini + Gemma / Ollama Model Portability

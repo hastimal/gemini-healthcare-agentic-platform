@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import httpx
 
+from connectors.provider_search.specialty import NPPESSpecialtyResolver
 from models import SearchResult, SourceType
 
 
@@ -27,6 +28,7 @@ class NPPESProviderClient:
         """
         Create one reusable HTTP client for NPPES requests.
         """
+        self.specialty_resolver = NPPESSpecialtyResolver()
         self.client = httpx.Client(
             timeout=20.0,
             headers={
@@ -74,9 +76,13 @@ class NPPESProviderClient:
         # may be discarded by our strict post-filtering.
         api_limit = min(max(limit * 3, 20), 200)
 
+        resolved_specialty = self.specialty_resolver.resolve(
+            taxonomy_description
+        )
+
         params = {
             "version": "2.1",
-            "taxonomy_description": taxonomy_description,
+            "taxonomy_description": resolved_specialty.search_term,
             "city": city,
             "state": state,
             "limit": api_limit,
@@ -91,7 +97,13 @@ class NPPESProviderClient:
         data = response.json()
 
         # Normalize raw NPPES records into our shared SearchResult model.
-        results = [self._normalize_provider(provider) for provider in data.get("results", [])]
+        results = [
+            self._normalize_provider(
+                provider,
+                requested_specialty=taxonomy_description,
+            )
+            for provider in data.get("results", [])
+        ]
 
         # Apply exact validation after NPPES retrieval.
         filtered = [
@@ -110,6 +122,7 @@ class NPPESProviderClient:
     def _normalize_provider(
         self,
         provider: dict,
+        requested_specialty: str,
     ) -> SearchResult:
         """
         Convert a raw NPPES provider record into SearchResult.
@@ -150,21 +163,11 @@ class NPPESProviderClient:
         practice_address = self._practice_address(addresses)
         location = self._format_location(practice_address)
 
-        # A provider may have several taxonomy entries.
-        #
-        # Example:
-        # Primary taxonomy: General Practice
-        # Secondary taxonomy: Pediatric Dentistry
-        #
-        # Since our search is for pediatric dentistry, prefer the
-        # Pediatric Dentistry taxonomy when one exists.
-        pediatric_taxonomy = next(
-            (
-                taxonomy
-                for taxonomy in taxonomies
-                if "pediatric dentistry" in str(taxonomy.get("desc") or "").lower()
-            ),
-            None,
+        # Prefer the taxonomy that best matches this request instead of
+        # embedding the flagship pediatric-dentistry example in connector logic.
+        matching_taxonomy = self.specialty_resolver.best_matching_taxonomy(
+            requested_specialty=requested_specialty,
+            taxonomies=taxonomies,
         )
 
         # Use primary taxonomy only as a fallback.
@@ -173,7 +176,7 @@ class NPPESProviderClient:
             taxonomies[0] if taxonomies else {},
         )
 
-        selected_taxonomy = pediatric_taxonomy or primary_taxonomy
+        selected_taxonomy = matching_taxonomy or primary_taxonomy
 
         taxonomy_description = selected_taxonomy.get("desc")
         taxonomy_code = selected_taxonomy.get("code")
@@ -239,8 +242,8 @@ class NPPESProviderClient:
             },
         )
 
-    @staticmethod
     def _matches_search(
+        self,
         result: SearchResult,
         taxonomy_description: str,
         city: str,
@@ -270,11 +273,16 @@ class NPPESProviderClient:
         requested_city = city.strip().lower()
         requested_state = state.strip().lower()
 
-        all_taxonomies = str(result.metadata.get("all_taxonomy_descriptions") or "").lower()
+        all_taxonomies = str(
+            result.metadata.get("all_taxonomy_descriptions") or ""
+        )
 
-        # Match against all taxonomy descriptions, not only
-        # the provider's primary taxonomy.
-        taxonomy_match = taxonomy_description.strip().lower() in all_taxonomies
+        # Match against all returned taxonomy descriptions using the same
+        # specialty semantics as the outbound NPPES request.
+        taxonomy_match = self.specialty_resolver.matches_any_description(
+            requested_specialty=taxonomy_description,
+            taxonomy_descriptions=all_taxonomies,
+        )
 
         return result_city == requested_city and result_state == requested_state and taxonomy_match
 
