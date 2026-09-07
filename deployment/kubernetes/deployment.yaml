@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: healthcare-ai-app
+  namespace: healthcare-ai
+  labels:
+    app: healthcare-ai-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: healthcare-ai-app
+  template:
+    metadata:
+      labels:
+        app: healthcare-ai-app
+    spec:
+      containers:
+        - name: healthcare-ai-app
+          image: gemini-healthcare-agentic-platform:v1.2-dev
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 8501
+              name: http
+
+          envFrom:
+            - configMapRef:
+                name: healthcare-ai-config
+            - secretRef:
+                name: healthcare-ai-secrets
+
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+
+          livenessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: healthcare-ai-config
+  namespace: healthcare-ai
+data:
+  MODEL_PROVIDER: "gemini"
+  GEMINI_MODEL: "gemini-3.7-flash"
+  APP_ENV: "kubernetes"
+  LOG_LEVEL: "INFO"
+  FHIR_BASE_URL: "https://hapi.fhir.org/baseR4"
+  FHIR_TIMEOUT_SECONDS: "20"
