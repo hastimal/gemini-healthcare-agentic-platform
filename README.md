@@ -14,6 +14,61 @@ v1.1 adds a reproducible evaluation layer around the accepted healthcare agent w
 
 The frozen **v1.1 Core Acceptance Benchmark** contains 11 cases across provider discovery, biomedical research, health information, FHIR interoperability, and two intentionally unsupported workflows.
 
+### v1.1 Core Acceptance Benchmark Architecture
+
+```text
+                    v1.1 CORE ACCEPTANCE BENCHMARK
+                             11 CASES
+                                |
+              +-----------------+-----------------+
+              |                                   |
+      GEMINI 3.7 FLASH                      GEMMA 4 12B
+        Hosted API                         Local / Ollama
+              |                                   |
+              +-----------------+-----------------+
+                                |
+                                v
+                   GOOGLE ADK 3-AGENT PLATFORM
+        +---------------------------------------------+
+        |                                             |
+        |  1. Search Planner Agent                    |
+        |  2. Healthcare Research Agent               |
+        |  3. Evidence & Answer Agent                 |
+        |                                             |
+        +----------------------+----------------------+
+                               |
+                               v
+                    HEALTHCARE EVIDENCE LAYER
+        +---------------+---------------+-------------------+
+        |     NPPES     |    PubMed     |      FHIR R4      |
+        | Provider Data |   Research    | Interoperability  |
+        +---------------+---------------+-------------------+
+                               |
+                               v
+                    STRUCTURED PIPELINE OUTPUT
+                               |
+                               v
+                       EVALUATION ADAPTER
+                               |
+                               v
+        +---------------------------------------------+
+        |          DETERMINISTIC EVALUATION           |
+        |                                             |
+        |  Retrieval        Source Authority          |
+        |  Citations        Groundedness              |
+        |  Completeness     Healthcare Safety         |
+        |                                             |
+        +----------------------+----------------------+
+                               |
+                               v
+                       REPRODUCIBLE RESULTS
+                      JSON / CSV / Markdown
+                               |
+                               v
+                     CROSS-MODEL COMPARISON
+                       Gemini <-> Gemma
+```
+
 Measured first-run results:
 
 | Model path | Core cases passed | Supported workflow completions | Expected unsupported boundaries | Provider discovery | FHIR | Median latency* |
