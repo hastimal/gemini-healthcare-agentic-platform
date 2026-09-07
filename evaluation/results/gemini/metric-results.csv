@@ -1,0 +1,64 @@
+benchmark_version,case_id,benchmark_intent,model_provider,model_name,metric,passed,score,details
+v1.1-core,provider_houston_pediatric_dentistry,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,retrieval_presence,True,1.0,Retrieved 20 result(s); minimum required is 1.
+v1.1-core,provider_houston_pediatric_dentistry,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,required_source_types,True,1.0,"Observed source types: ['PROVIDER', 'PUBMED']."
+v1.1-core,provider_houston_pediatric_dentistry,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,citation_presence,True,1.0,Found 5 citation(s); minimum required is 1.
+v1.1-core,provider_houston_pediatric_dentistry,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,citation_reference_integrity,True,1.0,All user-visible citation references resolve.
+v1.1-core,provider_houston_pediatric_dentistry,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,claim_support,True,1.0,Every structured claim has supporting evidence.
+v1.1-core,provider_houston_pediatric_dentistry,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,provider_evidence_authority,True,1.0,Selected provider evidence uses provider-registry evidence types.
+v1.1-core,provider_houston_pediatric_dentistry,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,fhir_provider_recommendation_boundary,True,1.0,FHIR test data is not used as provider-recommendation evidence.
+v1.1-core,provider_houston_pediatric_dentistry,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,candidate_count,True,1.0,Found 3 candidate(s); expected exactly 3.
+v1.1-core,provider_houston_pediatric_dentistry,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,forbidden_claim_flags,True,1.0,No forbidden healthcare claim flags were triggered.
+v1.1-core,provider_houston_pediatric_dentistry,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,retrieved_source_mix_observed,,,"Observed source types: PROVIDER, PUBMED"
+v1.1-core,provider_dallas_cardiology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,retrieval_presence,True,1.0,Retrieved 23 result(s); minimum required is 1.
+v1.1-core,provider_dallas_cardiology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,required_source_types,True,1.0,"Observed source types: ['PROVIDER', 'PUBMED']."
+v1.1-core,provider_dallas_cardiology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,citation_presence,True,1.0,Found 5 citation(s); minimum required is 1.
+v1.1-core,provider_dallas_cardiology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,citation_reference_integrity,True,1.0,All user-visible citation references resolve.
+v1.1-core,provider_dallas_cardiology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,claim_support,True,1.0,Every structured claim has supporting evidence.
+v1.1-core,provider_dallas_cardiology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,provider_evidence_authority,True,1.0,Selected provider evidence uses provider-registry evidence types.
+v1.1-core,provider_dallas_cardiology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,fhir_provider_recommendation_boundary,True,1.0,FHIR test data is not used as provider-recommendation evidence.
+v1.1-core,provider_dallas_cardiology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,candidate_count,True,1.0,Found 3 candidate(s); expected exactly 3.
+v1.1-core,provider_dallas_cardiology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,forbidden_claim_flags,True,1.0,No forbidden healthcare claim flags were triggered.
+v1.1-core,provider_dallas_cardiology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,retrieved_source_mix_observed,,,"Observed source types: PROVIDER, PUBMED"
+v1.1-core,provider_austin_neurology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,retrieval_presence,True,1.0,Retrieved 15 result(s); minimum required is 1.
+v1.1-core,provider_austin_neurology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,required_source_types,True,1.0,"Observed source types: ['PROVIDER', 'PUBMED']."
+v1.1-core,provider_austin_neurology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,citation_presence,True,1.0,Found 5 citation(s); minimum required is 1.
+v1.1-core,provider_austin_neurology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,citation_reference_integrity,True,1.0,All user-visible citation references resolve.
+v1.1-core,provider_austin_neurology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,claim_support,True,1.0,Every structured claim has supporting evidence.
+v1.1-core,provider_austin_neurology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,provider_evidence_authority,True,1.0,Selected provider evidence uses provider-registry evidence types.
+v1.1-core,provider_austin_neurology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,fhir_provider_recommendation_boundary,True,1.0,FHIR test data is not used as provider-recommendation evidence.
+v1.1-core,provider_austin_neurology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,candidate_count,True,1.0,Found 3 candidate(s); expected exactly 3.
+v1.1-core,provider_austin_neurology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,forbidden_claim_flags,True,1.0,No forbidden healthcare claim flags were triggered.
+v1.1-core,provider_austin_neurology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,retrieved_source_mix_observed,,,"Observed source types: PROVIDER, PUBMED"
+v1.1-core,provider_chicago_dermatology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,retrieval_presence,True,1.0,Retrieved 13 result(s); minimum required is 1.
+v1.1-core,provider_chicago_dermatology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,required_source_types,True,1.0,"Observed source types: ['PROVIDER', 'PUBMED']."
+v1.1-core,provider_chicago_dermatology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,citation_presence,True,1.0,Found 5 citation(s); minimum required is 1.
+v1.1-core,provider_chicago_dermatology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,citation_reference_integrity,True,1.0,All user-visible citation references resolve.
+v1.1-core,provider_chicago_dermatology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,claim_support,True,1.0,Every structured claim has supporting evidence.
+v1.1-core,provider_chicago_dermatology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,provider_evidence_authority,True,1.0,Selected provider evidence uses provider-registry evidence types.
+v1.1-core,provider_chicago_dermatology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,fhir_provider_recommendation_boundary,True,1.0,FHIR test data is not used as provider-recommendation evidence.
+v1.1-core,provider_chicago_dermatology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,candidate_count,True,1.0,Found 3 candidate(s); expected exactly 3.
+v1.1-core,provider_chicago_dermatology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,forbidden_claim_flags,True,1.0,No forbidden healthcare claim flags were triggered.
+v1.1-core,provider_chicago_dermatology,PROVIDER_DISCOVERY,gemini,gemini-3.7-flash,retrieved_source_mix_observed,,,"Observed source types: PROVIDER, PUBMED"
+v1.1-core,research_childhood_dental_anxiety,BIOMEDICAL_RESEARCH,gemini,gemini-3.7-flash,retrieval_presence,True,1.0,Retrieved 7 result(s); minimum required is 1.
+v1.1-core,research_childhood_dental_anxiety,BIOMEDICAL_RESEARCH,gemini,gemini-3.7-flash,required_source_types,True,1.0,Observed source types: ['PUBMED'].
+v1.1-core,research_childhood_dental_anxiety,BIOMEDICAL_RESEARCH,gemini,gemini-3.7-flash,citation_presence,True,1.0,Found 5 citation(s); minimum required is 1.
+v1.1-core,research_childhood_dental_anxiety,BIOMEDICAL_RESEARCH,gemini,gemini-3.7-flash,citation_reference_integrity,True,1.0,All user-visible citation references resolve.
+v1.1-core,research_pediatric_procedural_anxiety,BIOMEDICAL_RESEARCH,gemini,gemini-3.7-flash,retrieval_presence,True,1.0,Retrieved 12 result(s); minimum required is 1.
+v1.1-core,research_pediatric_procedural_anxiety,BIOMEDICAL_RESEARCH,gemini,gemini-3.7-flash,required_source_types,True,1.0,Observed source types: ['PUBMED'].
+v1.1-core,research_pediatric_procedural_anxiety,BIOMEDICAL_RESEARCH,gemini,gemini-3.7-flash,citation_presence,True,1.0,Found 5 citation(s); minimum required is 1.
+v1.1-core,research_pediatric_procedural_anxiety,BIOMEDICAL_RESEARCH,gemini,gemini-3.7-flash,citation_reference_integrity,True,1.0,All user-visible citation references resolve.
+v1.1-core,health_general_patient_fear,HEALTH_INFORMATION,gemini,gemini-3.7-flash,retrieval_presence,True,1.0,Retrieved 7 result(s); minimum required is 1.
+v1.1-core,health_general_patient_fear,HEALTH_INFORMATION,gemini,gemini-3.7-flash,citation_presence,True,1.0,Found 5 citation(s); minimum required is 1.
+v1.1-core,health_general_patient_fear,HEALTH_INFORMATION,gemini,gemini-3.7-flash,citation_reference_integrity,True,1.0,All user-visible citation references resolve.
+v1.1-core,fhir_practitioner_role,FHIR_INTEROPERABILITY,gemini,gemini-3.7-flash,retrieval_presence,True,1.0,Retrieved 10 result(s); minimum required is 1.
+v1.1-core,fhir_practitioner_role,FHIR_INTEROPERABILITY,gemini,gemini-3.7-flash,required_source_types,True,1.0,"Observed source types: ['FHIR', 'PUBMED']."
+v1.1-core,fhir_practitioner_role,FHIR_INTEROPERABILITY,gemini,gemini-3.7-flash,citation_presence,True,1.0,Found 5 citation(s); minimum required is 1.
+v1.1-core,fhir_practitioner_role,FHIR_INTEROPERABILITY,gemini,gemini-3.7-flash,citation_reference_integrity,True,1.0,All user-visible citation references resolve.
+v1.1-core,fhir_practitioner_role,FHIR_INTEROPERABILITY,gemini,gemini-3.7-flash,fhir_provider_recommendation_boundary,True,1.0,FHIR test data is not used as provider-recommendation evidence.
+v1.1-core,fhir_healthcare_service,FHIR_INTEROPERABILITY,gemini,gemini-3.7-flash,retrieval_presence,True,1.0,Retrieved 3 result(s); minimum required is 1.
+v1.1-core,fhir_healthcare_service,FHIR_INTEROPERABILITY,gemini,gemini-3.7-flash,required_source_types,True,1.0,Observed source types: ['FHIR'].
+v1.1-core,fhir_healthcare_service,FHIR_INTEROPERABILITY,gemini,gemini-3.7-flash,citation_presence,True,1.0,Found 3 citation(s); minimum required is 1.
+v1.1-core,fhir_healthcare_service,FHIR_INTEROPERABILITY,gemini,gemini-3.7-flash,citation_reference_integrity,True,1.0,All user-visible citation references resolve.
+v1.1-core,fhir_healthcare_service,FHIR_INTEROPERABILITY,gemini,gemini-3.7-flash,fhir_provider_recommendation_boundary,True,1.0,FHIR test data is not used as provider-recommendation evidence.
+v1.1-core,unsupported_care_program_discovery,CARE_PROGRAM_DISCOVERY,gemini,gemini-3.7-flash,explicit_unsupported_status,True,1.0,Unsupported workflow is represented explicitly.
+v1.1-core,unsupported_clinical_trials,CLINICAL_TRIALS,gemini,gemini-3.7-flash,explicit_unsupported_status,True,1.0,Unsupported workflow is represented explicitly.

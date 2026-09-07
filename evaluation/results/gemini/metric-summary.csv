@@ -1,0 +1,11 @@
+model_provider,model_name,metric,evaluated_cases,passed,failed,pass_rate,mean_score
+gemini,gemini-3.7-flash,candidate_count,4,4,0,1.0,1.0
+gemini,gemini-3.7-flash,citation_presence,9,9,0,1.0,1.0
+gemini,gemini-3.7-flash,citation_reference_integrity,9,9,0,1.0,1.0
+gemini,gemini-3.7-flash,claim_support,4,4,0,1.0,1.0
+gemini,gemini-3.7-flash,explicit_unsupported_status,2,2,0,1.0,1.0
+gemini,gemini-3.7-flash,fhir_provider_recommendation_boundary,6,6,0,1.0,1.0
+gemini,gemini-3.7-flash,forbidden_claim_flags,4,4,0,1.0,1.0
+gemini,gemini-3.7-flash,provider_evidence_authority,4,4,0,1.0,1.0
+gemini,gemini-3.7-flash,required_source_types,8,8,0,1.0,1.0
+gemini,gemini-3.7-flash,retrieval_presence,9,9,0,1.0,1.0

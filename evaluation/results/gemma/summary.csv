@@ -1,0 +1,2 @@
+model_provider,model_name,cases,evaluated_cases,passed_cases,failed_cases,pass_rate,mean_retrieved_sources,mean_citations,median_latency_seconds,mean_latency_seconds
+gemma,gemma4:12b,11,11,10,1,0.9090909090909091,8.909090909090908,3.4545454545454546,167.41496816699873,229.24139464763687

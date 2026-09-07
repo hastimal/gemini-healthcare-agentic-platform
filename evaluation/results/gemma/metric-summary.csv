@@ -1,0 +1,12 @@
+model_provider,model_name,metric,evaluated_cases,passed,failed,pass_rate,mean_score
+gemma,gemma4:12b,candidate_count,4,4,0,1.0,1.0
+gemma,gemma4:12b,citation_presence,8,8,0,1.0,1.0
+gemma,gemma4:12b,citation_reference_integrity,8,8,0,1.0,1.0
+gemma,gemma4:12b,claim_support,4,4,0,1.0,1.0
+gemma,gemma4:12b,execution_success,1,0,1,0.0,0.0
+gemma,gemma4:12b,explicit_unsupported_status,2,2,0,1.0,1.0
+gemma,gemma4:12b,fhir_provider_recommendation_boundary,5,5,0,1.0,1.0
+gemma,gemma4:12b,forbidden_claim_flags,4,4,0,1.0,1.0
+gemma,gemma4:12b,provider_evidence_authority,4,4,0,1.0,1.0
+gemma,gemma4:12b,required_source_types,7,7,0,1.0,1.0
+gemma,gemma4:12b,retrieval_presence,8,8,0,1.0,1.0

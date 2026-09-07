@@ -1,0 +1,7 @@
+benchmark_intent,model_provider,model_name,cases,passed_cases,pass_rate,mean_retrieved_sources,mean_citations,median_latency_seconds
+BIOMEDICAL_RESEARCH,gemma,gemma4:12b,2,2,1.0,9.0,5.0,337.65356262500063
+CARE_PROGRAM_DISCOVERY,gemma,gemma4:12b,1,1,1.0,0.0,0.0,98.57932312499906
+CLINICAL_TRIALS,gemma,gemma4:12b,1,1,1.0,0.0,0.0,71.84784758299793
+FHIR_INTEROPERABILITY,gemma,gemma4:12b,2,1,0.5,1.5,1.5,457.32190183350394
+HEALTH_INFORMATION,gemma,gemma4:12b,1,1,1.0,12.0,5.0,216.70112558300025
+PROVIDER_DISCOVERY,gemma,gemma4:12b,4,4,1.0,16.25,5.0,129.1583959790005
