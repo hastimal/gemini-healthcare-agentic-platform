@@ -5,7 +5,6 @@ import pytest
 
 from evaluation.models import EvaluationCase, EvaluationIntent
 
-
 DATASET = Path("evaluation/datasets/healthcare_benchmark.jsonl")
 
 

@@ -34,28 +34,30 @@ def case_rows(results: list[ResearchBenchmarkCaseResult]) -> list[dict[str, Any]
     rows = []
     for result in results:
         hard = [m for m in result.metrics if m.passed is not None]
-        rows.append({
-            "benchmark_version": result.benchmark_version,
-            "case_id": result.case_id,
-            "title": result.title,
-            "query": result.query,
-            "benchmark_intent": result.benchmark_intent.value,
-            "tags": "|".join(result.tags),
-            "model_provider": result.model_provider,
-            "model_name": result.model_name,
-            "execution_status": result.execution_status,
-            "overall_passed": result.overall_passed,
-            "hard_metrics": len(hard),
-            "hard_metrics_passed": sum(m.passed is True for m in hard),
-            "retrieved_sources": result.retrieved_sources,
-            "deduplicated_sources": result.deduplicated_sources,
-            "selected_evidence_count": result.selected_evidence_count,
-            "recommendation_count": result.recommendation_count,
-            "citation_count": result.citation_count,
-            "latency_seconds": result.latency_seconds,
-            "error_type": result.error_type,
-            "error_message": result.error_message,
-        })
+        rows.append(
+            {
+                "benchmark_version": result.benchmark_version,
+                "case_id": result.case_id,
+                "title": result.title,
+                "query": result.query,
+                "benchmark_intent": result.benchmark_intent.value,
+                "tags": "|".join(result.tags),
+                "model_provider": result.model_provider,
+                "model_name": result.model_name,
+                "execution_status": result.execution_status,
+                "overall_passed": result.overall_passed,
+                "hard_metrics": len(hard),
+                "hard_metrics_passed": sum(m.passed is True for m in hard),
+                "retrieved_sources": result.retrieved_sources,
+                "deduplicated_sources": result.deduplicated_sources,
+                "selected_evidence_count": result.selected_evidence_count,
+                "recommendation_count": result.recommendation_count,
+                "citation_count": result.citation_count,
+                "latency_seconds": result.latency_seconds,
+                "error_type": result.error_type,
+                "error_message": result.error_message,
+            }
+        )
     return rows
 
 
@@ -63,17 +65,19 @@ def metric_rows(results: list[ResearchBenchmarkCaseResult]) -> list[dict[str, An
     rows = []
     for result in results:
         for metric in result.metrics:
-            rows.append({
-                "benchmark_version": result.benchmark_version,
-                "case_id": result.case_id,
-                "benchmark_intent": result.benchmark_intent.value,
-                "model_provider": result.model_provider,
-                "model_name": result.model_name,
-                "metric": metric.metric,
-                "passed": metric.passed,
-                "score": metric.score,
-                "details": metric.details,
-            })
+            rows.append(
+                {
+                    "benchmark_version": result.benchmark_version,
+                    "case_id": result.case_id,
+                    "benchmark_intent": result.benchmark_intent.value,
+                    "model_provider": result.model_provider,
+                    "model_name": result.model_name,
+                    "metric": metric.metric,
+                    "passed": metric.passed,
+                    "score": metric.score,
+                    "details": metric.details,
+                }
+            )
     return rows
 
 
@@ -87,43 +91,49 @@ def model_summary_rows(results: list[ResearchBenchmarkCaseResult]) -> list[dict[
         evaluated = [item for item in items if item.overall_passed is not None]
         passed = sum(item.overall_passed is True for item in evaluated)
         latencies = [item.latency_seconds for item in items if item.latency_seconds is not None]
-        rows.append({
-            "model_provider": provider,
-            "model_name": model_name,
-            "cases": len(items),
-            "evaluated_cases": len(evaluated),
-            "passed_cases": passed,
-            "failed_cases": len(evaluated) - passed,
-            "pass_rate": _rate(passed, len(evaluated)),
-            "mean_retrieved_sources": _mean([float(item.retrieved_sources) for item in items]),
-            "mean_citations": _mean([float(item.citation_count) for item in items]),
-            "median_latency_seconds": _median(latencies),
-            "mean_latency_seconds": _mean(latencies),
-        })
+        rows.append(
+            {
+                "model_provider": provider,
+                "model_name": model_name,
+                "cases": len(items),
+                "evaluated_cases": len(evaluated),
+                "passed_cases": passed,
+                "failed_cases": len(evaluated) - passed,
+                "pass_rate": _rate(passed, len(evaluated)),
+                "mean_retrieved_sources": _mean([float(item.retrieved_sources) for item in items]),
+                "mean_citations": _mean([float(item.citation_count) for item in items]),
+                "median_latency_seconds": _median(latencies),
+                "mean_latency_seconds": _mean(latencies),
+            }
+        )
     return rows
 
 
 def intent_summary_rows(results: list[ResearchBenchmarkCaseResult]) -> list[dict[str, Any]]:
     grouped = defaultdict(list)
     for result in results:
-        grouped[(result.benchmark_intent.value, result.model_provider, result.model_name)].append(result)
+        grouped[(result.benchmark_intent.value, result.model_provider, result.model_name)].append(
+            result
+        )
 
     rows = []
     for (intent, provider, model_name), items in sorted(grouped.items()):
         evaluated = [item for item in items if item.overall_passed is not None]
         passed = sum(item.overall_passed is True for item in evaluated)
         latencies = [item.latency_seconds for item in items if item.latency_seconds is not None]
-        rows.append({
-            "benchmark_intent": intent,
-            "model_provider": provider,
-            "model_name": model_name,
-            "cases": len(items),
-            "passed_cases": passed,
-            "pass_rate": _rate(passed, len(evaluated)),
-            "mean_retrieved_sources": _mean([float(item.retrieved_sources) for item in items]),
-            "mean_citations": _mean([float(item.citation_count) for item in items]),
-            "median_latency_seconds": _median(latencies),
-        })
+        rows.append(
+            {
+                "benchmark_intent": intent,
+                "model_provider": provider,
+                "model_name": model_name,
+                "cases": len(items),
+                "passed_cases": passed,
+                "pass_rate": _rate(passed, len(evaluated)),
+                "mean_retrieved_sources": _mean([float(item.retrieved_sources) for item in items]),
+                "mean_citations": _mean([float(item.citation_count) for item in items]),
+                "median_latency_seconds": _median(latencies),
+            }
+        )
     return rows
 
 
@@ -138,16 +148,18 @@ def metric_summary_rows(results: list[ResearchBenchmarkCaseResult]) -> list[dict
     for (provider, model_name, metric_name), metrics in sorted(grouped.items()):
         passed = sum(metric.passed is True for metric in metrics)
         scores = [metric.score for metric in metrics if metric.score is not None]
-        rows.append({
-            "model_provider": provider,
-            "model_name": model_name,
-            "metric": metric_name,
-            "evaluated_cases": len(metrics),
-            "passed": passed,
-            "failed": len(metrics) - passed,
-            "pass_rate": _rate(passed, len(metrics)),
-            "mean_score": _mean(scores),
-        })
+        rows.append(
+            {
+                "model_provider": provider,
+                "model_name": model_name,
+                "metric": metric_name,
+                "evaluated_cases": len(metrics),
+                "passed": passed,
+                "failed": len(metrics) - passed,
+                "pass_rate": _rate(passed, len(metrics)),
+                "mean_score": _mean(scores),
+            }
+        )
     return rows
 
 
@@ -178,29 +190,105 @@ def render_markdown(results: list[ResearchBenchmarkCaseResult]) -> str:
     metric_summary = metric_summary_rows(results)
 
     parts = [
-        "# v1.1 Evaluation Benchmark Results", "",
-        "> Generated from stored benchmark results. Do not edit measured values manually.", "",
-        "## Model Summary", "",
+        "# v1.1 Evaluation Benchmark Results",
+        "",
+        "> Generated from stored benchmark results. Do not edit measured values manually.",
+        "",
+        "## Model Summary",
+        "",
         _markdown_table(
             ["Provider", "Model", "Cases", "Passed", "Pass Rate", "Median Latency (s)"],
-            [[r["model_provider"], r["model_name"], r["cases"], r["passed_cases"], r["pass_rate"], r["median_latency_seconds"]] for r in model_rows],
-        ), "",
-        "## Workflow / Intent Summary", "",
+            [
+                [
+                    r["model_provider"],
+                    r["model_name"],
+                    r["cases"],
+                    r["passed_cases"],
+                    r["pass_rate"],
+                    r["median_latency_seconds"],
+                ]
+                for r in model_rows
+            ],
+        ),
+        "",
+        "## Workflow / Intent Summary",
+        "",
         _markdown_table(
-            ["Intent", "Provider", "Cases", "Passed", "Pass Rate", "Avg Retrieved", "Avg Citations", "Median Latency (s)"],
-            [[r["benchmark_intent"], r["model_provider"], r["cases"], r["passed_cases"], r["pass_rate"], r["mean_retrieved_sources"], r["mean_citations"], r["median_latency_seconds"]] for r in intent_rows],
-        ), "",
-        "## Metric Summary", "",
+            [
+                "Intent",
+                "Provider",
+                "Cases",
+                "Passed",
+                "Pass Rate",
+                "Avg Retrieved",
+                "Avg Citations",
+                "Median Latency (s)",
+            ],
+            [
+                [
+                    r["benchmark_intent"],
+                    r["model_provider"],
+                    r["cases"],
+                    r["passed_cases"],
+                    r["pass_rate"],
+                    r["mean_retrieved_sources"],
+                    r["mean_citations"],
+                    r["median_latency_seconds"],
+                ]
+                for r in intent_rows
+            ],
+        ),
+        "",
+        "## Metric Summary",
+        "",
         _markdown_table(
             ["Provider", "Metric", "Evaluated", "Passed", "Failed", "Pass Rate", "Mean Score"],
-            [[r["model_provider"], r["metric"], r["evaluated_cases"], r["passed"], r["failed"], r["pass_rate"], r["mean_score"]] for r in metric_summary],
-        ), "",
-        "## Case Results", "",
+            [
+                [
+                    r["model_provider"],
+                    r["metric"],
+                    r["evaluated_cases"],
+                    r["passed"],
+                    r["failed"],
+                    r["pass_rate"],
+                    r["mean_score"],
+                ]
+                for r in metric_summary
+            ],
+        ),
+        "",
+        "## Case Results",
+        "",
         _markdown_table(
-            ["Case", "Intent", "Provider", "Status", "Passed", "Retrieved", "Selected", "Citations", "Latency (s)"],
-            [[r.case_id, r.benchmark_intent.value, r.model_provider, r.execution_status, r.overall_passed, r.retrieved_sources, r.selected_evidence_count, r.citation_count, r.latency_seconds] for r in results],
-        ), "",
-        "Latency is reported as a diagnostic measurement, not as a model-superiority claim.", "",
+            [
+                "Case",
+                "Intent",
+                "Provider",
+                "Status",
+                "Passed",
+                "Retrieved",
+                "Selected",
+                "Citations",
+                "Latency (s)",
+            ],
+            [
+                [
+                    r.case_id,
+                    r.benchmark_intent.value,
+                    r.model_provider,
+                    r.execution_status,
+                    r.overall_passed,
+                    r.retrieved_sources,
+                    r.selected_evidence_count,
+                    r.citation_count,
+                    r.latency_seconds,
+                ]
+                for r in results
+            ],
+        ),
+        "",
+        "Latency is reported as a diagnostic measurement, not as a model-superiority claim.",
+        "",
     ]
     return "\n".join(parts)
 

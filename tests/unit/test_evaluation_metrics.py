@@ -1,8 +1,14 @@
 from evaluation.metrics.citations import evaluate_citation_presence, evaluate_citation_targets
 from evaluation.metrics.completeness import evaluate_candidate_count, evaluate_required_sections
-from evaluation.metrics.grounding import evaluate_claim_support, evaluate_provider_claim_source_boundary
+from evaluation.metrics.grounding import (
+    evaluate_claim_support,
+    evaluate_provider_claim_source_boundary,
+)
 from evaluation.metrics.retrieval import evaluate_retrieval_presence, evaluate_source_type_presence
-from evaluation.metrics.safety import evaluate_explicit_unsupported_status, evaluate_forbidden_claim_flags
+from evaluation.metrics.safety import (
+    evaluate_explicit_unsupported_status,
+    evaluate_forbidden_claim_flags,
+)
 from evaluation.metrics.source_authority import (
     evaluate_fhir_not_used_as_provider_recommendation,
     evaluate_provider_evidence_authority,
@@ -16,7 +22,10 @@ def test_retrieval_presence_passes_and_fails() -> None:
 
 def test_required_source_types() -> None:
     results = [{"source_type": "NPPES"}, {"source_type": "PUBMED"}]
-    assert evaluate_source_type_presence(results, required_source_types={"NPPES", "PUBMED"}).passed is True
+    assert (
+        evaluate_source_type_presence(results, required_source_types={"NPPES", "PUBMED"}).passed
+        is True
+    )
 
 
 def test_citation_targets_selected_evidence() -> None:
@@ -64,8 +73,15 @@ def test_fhir_boundary() -> None:
 
 def test_required_answer_sections() -> None:
     answer = {"answer": "text", "citations": [{"evidence_id": "E1"}]}
-    assert evaluate_required_sections(answer, required_sections={"answer", "citations"}).passed is True
-    assert evaluate_required_sections(answer, required_sections={"answer", "citations", "limitations"}).passed is False
+    assert (
+        evaluate_required_sections(answer, required_sections={"answer", "citations"}).passed is True
+    )
+    assert (
+        evaluate_required_sections(
+            answer, required_sections={"answer", "citations", "limitations"}
+        ).passed
+        is False
+    )
 
 
 def test_candidate_count() -> None:
@@ -83,5 +99,7 @@ def test_forbidden_claim_flags() -> None:
 
 def test_explicit_unsupported_status() -> None:
     assert evaluate_explicit_unsupported_status({"status": "unsupported"}).passed is True
-    assert evaluate_explicit_unsupported_status({"error_type": "NotImplementedError"}).passed is True
+    assert (
+        evaluate_explicit_unsupported_status({"error_type": "NotImplementedError"}).passed is True
+    )
     assert evaluate_explicit_unsupported_status({"status": "success"}).passed is False

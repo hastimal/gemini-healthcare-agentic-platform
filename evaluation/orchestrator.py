@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Iterable
-
 from evaluation.adapters.production import (
     citations,
     grounded_answer,
@@ -28,8 +26,6 @@ from evaluation.metrics.source_authority import (
     evaluate_provider_evidence_authority,
 )
 from evaluation.models import (
-    BenchmarkExecutionResult,
-    EvaluationCase,
     EvaluationIntent,
     EvaluationMetricResult,
     ResearchBenchmarkCaseResult,

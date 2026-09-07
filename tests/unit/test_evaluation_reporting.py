@@ -28,8 +28,12 @@ def _result(case_id="case_one", intent=EvaluationIntent.PROVIDER_DISCOVERY):
         recommendation_count=3,
         citation_count=5,
         metrics=[
-            EvaluationMetricResult(metric="citation_presence", passed=True, score=1.0, details="synthetic"),
-            EvaluationMetricResult(metric="observed_diagnostic", passed=None, details="not a hard metric"),
+            EvaluationMetricResult(
+                metric="citation_presence", passed=True, score=1.0, details="synthetic"
+            ),
+            EvaluationMetricResult(
+                metric="observed_diagnostic", passed=None, details="not a hard metric"
+            ),
         ],
         overall_passed=True,
     )
@@ -59,10 +63,12 @@ def test_model_summary_computes_pass_rate_and_latency():
 
 
 def test_intent_summary_groups_by_workflow():
-    rows = intent_summary_rows([
-        _result(),
-        _result("case_two", EvaluationIntent.BIOMEDICAL_RESEARCH),
-    ])
+    rows = intent_summary_rows(
+        [
+            _result(),
+            _result("case_two", EvaluationIntent.BIOMEDICAL_RESEARCH),
+        ]
+    )
     assert len(rows) == 2
 
 

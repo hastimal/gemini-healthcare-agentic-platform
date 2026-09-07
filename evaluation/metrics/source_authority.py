@@ -5,7 +5,6 @@ from typing import Any
 
 from evaluation.models import EvaluationMetricResult
 
-
 AUTHORITATIVE_PROVIDER_TYPES = {"PROVIDER", "NPPES"}
 
 
