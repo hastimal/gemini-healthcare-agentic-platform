@@ -1,0 +1,3 @@
+model_provider,model_name,core_cases,supported_cases,supported_successes,expected_unsupported_cases,expected_unsupported_passed,overall_passed,overall_failed,pass_rate,median_latency_seconds,mean_latency_seconds
+gemini,gemini-3.7-flash,11,9,9,2,2,11,0,1.0,10.602463624996744,9.442038689454256
+gemma,gemma4:12b,11,9,8,2,2,10,1,0.9090909090909091,167.41496816699873,229.24139464763687

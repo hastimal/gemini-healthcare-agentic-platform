@@ -1,0 +1,7 @@
+benchmark_intent,gemini_cases,gemini_passed,gemini_pass_rate,gemini_mean_retrieved_sources,gemini_mean_citations,gemini_median_latency_seconds,gemma_cases,gemma_passed,gemma_pass_rate,gemma_mean_retrieved_sources,gemma_mean_citations,gemma_median_latency_seconds
+BIOMEDICAL_RESEARCH,2,2,1.0,9.5,5.0,12.747990125000797,2,2,1.0,9.0,5.0,337.65356262500063
+CARE_PROGRAM_DISCOVERY,1,1,1.0,0.0,0.0,3.490501416999905,1,1,1.0,0.0,0.0,98.57932312499906
+CLINICAL_TRIALS,1,1,1.0,0.0,0.0,3.3698596250033006,1,1,1.0,0.0,0.0,71.84784758299793
+FHIR_INTEROPERABILITY,2,2,1.0,6.5,4.0,10.852501770499657,2,1,0.5,1.5,1.5,457.32190183350394
+HEALTH_INFORMATION,1,1,1.0,7.0,5.0,11.36586958299813,1,1,1.0,12.0,5.0,216.70112558300025
+PROVIDER_DISCOVERY,4,4,1.0,17.75,5.0,9.553761395998663,4,4,1.0,16.25,5.0,129.1583959790005

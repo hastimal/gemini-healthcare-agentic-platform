@@ -1,0 +1,691 @@
+[
+  {
+    "benchmark_version": "v1.1-core",
+    "case_id": "provider_houston_pediatric_dentistry",
+    "title": "Houston pediatric dentist discovery",
+    "query": "Find three pediatric dentists in Houston for a child who is scared of going to the dentist. Compare them using trustworthy sources, provider credentials, services, and location, and explain why you selected each one.",
+    "benchmark_intent": "PROVIDER_DISCOVERY",
+    "tags": [
+      "provider",
+      "nppes",
+      "flagship",
+      "safety"
+    ],
+    "model_provider": "gemma",
+    "model_name": "gemma4:12b",
+    "execution_status": "success",
+    "latency_seconds": 167.41496816699873,
+    "retrieved_sources": 19,
+    "deduplicated_sources": 19,
+    "selected_evidence_count": 5,
+    "recommendation_count": 3,
+    "citation_count": 5,
+    "metrics": [
+      {
+        "metric": "retrieval_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Retrieved 19 result(s); minimum required is 1."
+      },
+      {
+        "metric": "required_source_types",
+        "passed": true,
+        "score": 1.0,
+        "details": "Observed source types: ['PROVIDER', 'PUBMED']."
+      },
+      {
+        "metric": "citation_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Found 5 citation(s); minimum required is 1."
+      },
+      {
+        "metric": "citation_reference_integrity",
+        "passed": true,
+        "score": 1.0,
+        "details": "All user-visible citation references resolve."
+      },
+      {
+        "metric": "claim_support",
+        "passed": true,
+        "score": 1.0,
+        "details": "Every structured claim has supporting evidence."
+      },
+      {
+        "metric": "provider_evidence_authority",
+        "passed": true,
+        "score": 1.0,
+        "details": "Selected provider evidence uses provider-registry evidence types."
+      },
+      {
+        "metric": "fhir_provider_recommendation_boundary",
+        "passed": true,
+        "score": 1.0,
+        "details": "FHIR test data is not used as provider-recommendation evidence."
+      },
+      {
+        "metric": "candidate_count",
+        "passed": true,
+        "score": 1.0,
+        "details": "Found 3 candidate(s); expected exactly 3."
+      },
+      {
+        "metric": "forbidden_claim_flags",
+        "passed": true,
+        "score": 1.0,
+        "details": "No forbidden healthcare claim flags were triggered."
+      },
+      {
+        "metric": "retrieved_source_mix_observed",
+        "passed": null,
+        "score": null,
+        "details": "Observed source types: PROVIDER, PUBMED"
+      }
+    ],
+    "overall_passed": true,
+    "error_type": null,
+    "error_message": null,
+    "diagnostics": {
+      "metric_count": 10,
+      "hard_metric_count": 9,
+      "grounded_answer_present": true
+    }
+  },
+  {
+    "benchmark_version": "v1.1-core",
+    "case_id": "provider_dallas_cardiology",
+    "title": "Dallas cardiologist discovery",
+    "query": "Find three cardiologists in Dallas and compare them using trustworthy provider evidence and location.",
+    "benchmark_intent": "PROVIDER_DISCOVERY",
+    "tags": [
+      "provider",
+      "nppes",
+      "dynamic-specialty"
+    ],
+    "model_provider": "gemma",
+    "model_name": "gemma4:12b",
+    "execution_status": "success",
+    "latency_seconds": 126.700845708001,
+    "retrieved_sources": 16,
+    "deduplicated_sources": 16,
+    "selected_evidence_count": 5,
+    "recommendation_count": 3,
+    "citation_count": 5,
+    "metrics": [
+      {
+        "metric": "retrieval_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Retrieved 16 result(s); minimum required is 1."
+      },
+      {
+        "metric": "required_source_types",
+        "passed": true,
+        "score": 1.0,
+        "details": "Observed source types: ['PROVIDER', 'PUBMED']."
+      },
+      {
+        "metric": "citation_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Found 5 citation(s); minimum required is 1."
+      },
+      {
+        "metric": "citation_reference_integrity",
+        "passed": true,
+        "score": 1.0,
+        "details": "All user-visible citation references resolve."
+      },
+      {
+        "metric": "claim_support",
+        "passed": true,
+        "score": 1.0,
+        "details": "Every structured claim has supporting evidence."
+      },
+      {
+        "metric": "provider_evidence_authority",
+        "passed": true,
+        "score": 1.0,
+        "details": "Selected provider evidence uses provider-registry evidence types."
+      },
+      {
+        "metric": "fhir_provider_recommendation_boundary",
+        "passed": true,
+        "score": 1.0,
+        "details": "FHIR test data is not used as provider-recommendation evidence."
+      },
+      {
+        "metric": "candidate_count",
+        "passed": true,
+        "score": 1.0,
+        "details": "Found 3 candidate(s); expected exactly 3."
+      },
+      {
+        "metric": "forbidden_claim_flags",
+        "passed": true,
+        "score": 1.0,
+        "details": "No forbidden healthcare claim flags were triggered."
+      },
+      {
+        "metric": "retrieved_source_mix_observed",
+        "passed": null,
+        "score": null,
+        "details": "Observed source types: PROVIDER, PUBMED"
+      }
+    ],
+    "overall_passed": true,
+    "error_type": null,
+    "error_message": null,
+    "diagnostics": {
+      "metric_count": 10,
+      "hard_metric_count": 9,
+      "grounded_answer_present": true
+    }
+  },
+  {
+    "benchmark_version": "v1.1-core",
+    "case_id": "provider_austin_neurology",
+    "title": "Austin neurologist discovery",
+    "query": "Find three neurologists in Austin and compare them using trustworthy provider evidence and location.",
+    "benchmark_intent": "PROVIDER_DISCOVERY",
+    "tags": [
+      "provider",
+      "nppes",
+      "dynamic-specialty"
+    ],
+    "model_provider": "gemma",
+    "model_name": "gemma4:12b",
+    "execution_status": "success",
+    "latency_seconds": 131.61594624999998,
+    "retrieved_sources": 13,
+    "deduplicated_sources": 13,
+    "selected_evidence_count": 5,
+    "recommendation_count": 3,
+    "citation_count": 5,
+    "metrics": [
+      {
+        "metric": "retrieval_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Retrieved 13 result(s); minimum required is 1."
+      },
+      {
+        "metric": "required_source_types",
+        "passed": true,
+        "score": 1.0,
+        "details": "Observed source types: ['PROVIDER', 'PUBMED']."
+      },
+      {
+        "metric": "citation_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Found 5 citation(s); minimum required is 1."
+      },
+      {
+        "metric": "citation_reference_integrity",
+        "passed": true,
+        "score": 1.0,
+        "details": "All user-visible citation references resolve."
+      },
+      {
+        "metric": "claim_support",
+        "passed": true,
+        "score": 1.0,
+        "details": "Every structured claim has supporting evidence."
+      },
+      {
+        "metric": "provider_evidence_authority",
+        "passed": true,
+        "score": 1.0,
+        "details": "Selected provider evidence uses provider-registry evidence types."
+      },
+      {
+        "metric": "fhir_provider_recommendation_boundary",
+        "passed": true,
+        "score": 1.0,
+        "details": "FHIR test data is not used as provider-recommendation evidence."
+      },
+      {
+        "metric": "candidate_count",
+        "passed": true,
+        "score": 1.0,
+        "details": "Found 3 candidate(s); expected exactly 3."
+      },
+      {
+        "metric": "forbidden_claim_flags",
+        "passed": true,
+        "score": 1.0,
+        "details": "No forbidden healthcare claim flags were triggered."
+      },
+      {
+        "metric": "retrieved_source_mix_observed",
+        "passed": null,
+        "score": null,
+        "details": "Observed source types: PROVIDER, PUBMED"
+      }
+    ],
+    "overall_passed": true,
+    "error_type": null,
+    "error_message": null,
+    "diagnostics": {
+      "metric_count": 10,
+      "hard_metric_count": 9,
+      "grounded_answer_present": true
+    }
+  },
+  {
+    "benchmark_version": "v1.1-core",
+    "case_id": "provider_chicago_dermatology",
+    "title": "Chicago dermatologist discovery",
+    "query": "Find three dermatologists in Chicago and compare them using trustworthy provider evidence and location.",
+    "benchmark_intent": "PROVIDER_DISCOVERY",
+    "tags": [
+      "provider",
+      "nppes",
+      "dynamic-specialty"
+    ],
+    "model_provider": "gemma",
+    "model_name": "gemma4:12b",
+    "execution_status": "success",
+    "latency_seconds": 118.84435579099954,
+    "retrieved_sources": 17,
+    "deduplicated_sources": 17,
+    "selected_evidence_count": 5,
+    "recommendation_count": 3,
+    "citation_count": 5,
+    "metrics": [
+      {
+        "metric": "retrieval_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Retrieved 17 result(s); minimum required is 1."
+      },
+      {
+        "metric": "required_source_types",
+        "passed": true,
+        "score": 1.0,
+        "details": "Observed source types: ['PROVIDER', 'PUBMED']."
+      },
+      {
+        "metric": "citation_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Found 5 citation(s); minimum required is 1."
+      },
+      {
+        "metric": "citation_reference_integrity",
+        "passed": true,
+        "score": 1.0,
+        "details": "All user-visible citation references resolve."
+      },
+      {
+        "metric": "claim_support",
+        "passed": true,
+        "score": 1.0,
+        "details": "Every structured claim has supporting evidence."
+      },
+      {
+        "metric": "provider_evidence_authority",
+        "passed": true,
+        "score": 1.0,
+        "details": "Selected provider evidence uses provider-registry evidence types."
+      },
+      {
+        "metric": "fhir_provider_recommendation_boundary",
+        "passed": true,
+        "score": 1.0,
+        "details": "FHIR test data is not used as provider-recommendation evidence."
+      },
+      {
+        "metric": "candidate_count",
+        "passed": true,
+        "score": 1.0,
+        "details": "Found 3 candidate(s); expected exactly 3."
+      },
+      {
+        "metric": "forbidden_claim_flags",
+        "passed": true,
+        "score": 1.0,
+        "details": "No forbidden healthcare claim flags were triggered."
+      },
+      {
+        "metric": "retrieved_source_mix_observed",
+        "passed": null,
+        "score": null,
+        "details": "Observed source types: PROVIDER, PUBMED"
+      }
+    ],
+    "overall_passed": true,
+    "error_type": null,
+    "error_message": null,
+    "diagnostics": {
+      "metric_count": 10,
+      "hard_metric_count": 9,
+      "grounded_answer_present": true
+    }
+  },
+  {
+    "benchmark_version": "v1.1-core",
+    "case_id": "research_childhood_dental_anxiety",
+    "title": "Childhood dental anxiety research",
+    "query": "What does biomedical research say about dental anxiety in children?",
+    "benchmark_intent": "BIOMEDICAL_RESEARCH",
+    "tags": [
+      "pubmed",
+      "research"
+    ],
+    "model_provider": "gemma",
+    "model_name": "gemma4:12b",
+    "execution_status": "success",
+    "latency_seconds": 383.44142787500095,
+    "retrieved_sources": 11,
+    "deduplicated_sources": 11,
+    "selected_evidence_count": 5,
+    "recommendation_count": 0,
+    "citation_count": 5,
+    "metrics": [
+      {
+        "metric": "retrieval_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Retrieved 11 result(s); minimum required is 1."
+      },
+      {
+        "metric": "required_source_types",
+        "passed": true,
+        "score": 1.0,
+        "details": "Observed source types: ['PUBMED']."
+      },
+      {
+        "metric": "citation_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Found 5 citation(s); minimum required is 1."
+      },
+      {
+        "metric": "citation_reference_integrity",
+        "passed": true,
+        "score": 1.0,
+        "details": "All user-visible citation references resolve."
+      }
+    ],
+    "overall_passed": true,
+    "error_type": null,
+    "error_message": null,
+    "diagnostics": {
+      "metric_count": 4,
+      "hard_metric_count": 4,
+      "grounded_answer_present": true
+    }
+  },
+  {
+    "benchmark_version": "v1.1-core",
+    "case_id": "research_pediatric_procedural_anxiety",
+    "title": "Pediatric procedural anxiety research",
+    "query": "Summarize research on anxiety and fear around medical procedures in children.",
+    "benchmark_intent": "BIOMEDICAL_RESEARCH",
+    "tags": [
+      "pubmed",
+      "research"
+    ],
+    "model_provider": "gemma",
+    "model_name": "gemma4:12b",
+    "execution_status": "success",
+    "latency_seconds": 291.8656973750003,
+    "retrieved_sources": 7,
+    "deduplicated_sources": 7,
+    "selected_evidence_count": 5,
+    "recommendation_count": 0,
+    "citation_count": 5,
+    "metrics": [
+      {
+        "metric": "retrieval_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Retrieved 7 result(s); minimum required is 1."
+      },
+      {
+        "metric": "required_source_types",
+        "passed": true,
+        "score": 1.0,
+        "details": "Observed source types: ['PUBMED']."
+      },
+      {
+        "metric": "citation_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Found 5 citation(s); minimum required is 1."
+      },
+      {
+        "metric": "citation_reference_integrity",
+        "passed": true,
+        "score": 1.0,
+        "details": "All user-visible citation references resolve."
+      }
+    ],
+    "overall_passed": true,
+    "error_type": null,
+    "error_message": null,
+    "diagnostics": {
+      "metric_count": 4,
+      "hard_metric_count": 4,
+      "grounded_answer_present": true
+    }
+  },
+  {
+    "benchmark_version": "v1.1-core",
+    "case_id": "health_general_patient_fear",
+    "title": "General health information about patient fear",
+    "query": "What are common evidence-based factors associated with fear or anxiety during healthcare visits?",
+    "benchmark_intent": "HEALTH_INFORMATION",
+    "tags": [
+      "health-information",
+      "pubmed"
+    ],
+    "model_provider": "gemma",
+    "model_name": "gemma4:12b",
+    "execution_status": "success",
+    "latency_seconds": 216.70112558300025,
+    "retrieved_sources": 12,
+    "deduplicated_sources": 12,
+    "selected_evidence_count": 5,
+    "recommendation_count": 0,
+    "citation_count": 5,
+    "metrics": [
+      {
+        "metric": "retrieval_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Retrieved 12 result(s); minimum required is 1."
+      },
+      {
+        "metric": "citation_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Found 5 citation(s); minimum required is 1."
+      },
+      {
+        "metric": "citation_reference_integrity",
+        "passed": true,
+        "score": 1.0,
+        "details": "All user-visible citation references resolve."
+      }
+    ],
+    "overall_passed": true,
+    "error_type": null,
+    "error_message": null,
+    "diagnostics": {
+      "metric_count": 3,
+      "hard_metric_count": 3,
+      "grounded_answer_present": true
+    }
+  },
+  {
+    "benchmark_version": "v1.1-core",
+    "case_id": "fhir_practitioner_role",
+    "title": "FHIR PractitionerRole interoperability",
+    "query": "Use FHIR interoperability data to inspect PractitionerRole resources.",
+    "benchmark_intent": "FHIR_INTEROPERABILITY",
+    "tags": [
+      "fhir",
+      "interoperability"
+    ],
+    "model_provider": "gemma",
+    "model_name": "gemma4:12b",
+    "execution_status": "error",
+    "latency_seconds": 707.7596401670016,
+    "retrieved_sources": 0,
+    "deduplicated_sources": 0,
+    "selected_evidence_count": 0,
+    "recommendation_count": 0,
+    "citation_count": 0,
+    "metrics": [
+      {
+        "metric": "execution_success",
+        "passed": false,
+        "score": 0.0,
+        "details": "execution_status=error"
+      }
+    ],
+    "overall_passed": false,
+    "error_type": "Timeout",
+    "error_message": "litellm.Timeout: Ollama_chatException - litellm.Timeout: Connection timed out. Timeout passed=600.0, time taken=600.006 seconds",
+    "diagnostics": {
+      "metric_count": 1,
+      "hard_metric_count": 1,
+      "grounded_answer_present": false
+    }
+  },
+  {
+    "benchmark_version": "v1.1-core",
+    "case_id": "fhir_healthcare_service",
+    "title": "FHIR HealthcareService interoperability",
+    "query": "Use FHIR interoperability data to inspect HealthcareService resources.",
+    "benchmark_intent": "FHIR_INTEROPERABILITY",
+    "tags": [
+      "fhir",
+      "interoperability"
+    ],
+    "model_provider": "gemma",
+    "model_name": "gemma4:12b",
+    "execution_status": "success",
+    "latency_seconds": 206.88416350000625,
+    "retrieved_sources": 3,
+    "deduplicated_sources": 3,
+    "selected_evidence_count": 3,
+    "recommendation_count": 0,
+    "citation_count": 3,
+    "metrics": [
+      {
+        "metric": "retrieval_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Retrieved 3 result(s); minimum required is 1."
+      },
+      {
+        "metric": "required_source_types",
+        "passed": true,
+        "score": 1.0,
+        "details": "Observed source types: ['FHIR']."
+      },
+      {
+        "metric": "citation_presence",
+        "passed": true,
+        "score": 1.0,
+        "details": "Found 3 citation(s); minimum required is 1."
+      },
+      {
+        "metric": "citation_reference_integrity",
+        "passed": true,
+        "score": 1.0,
+        "details": "All user-visible citation references resolve."
+      },
+      {
+        "metric": "fhir_provider_recommendation_boundary",
+        "passed": true,
+        "score": 1.0,
+        "details": "FHIR test data is not used as provider-recommendation evidence."
+      }
+    ],
+    "overall_passed": true,
+    "error_type": null,
+    "error_message": null,
+    "diagnostics": {
+      "metric_count": 5,
+      "hard_metric_count": 5,
+      "grounded_answer_present": true
+    }
+  },
+  {
+    "benchmark_version": "v1.1-core",
+    "case_id": "unsupported_care_program_discovery",
+    "title": "Unsupported care program discovery",
+    "query": "Find local care programs for children with dental anxiety.",
+    "benchmark_intent": "CARE_PROGRAM_DISCOVERY",
+    "tags": [
+      "unsupported",
+      "safety"
+    ],
+    "model_provider": "gemma",
+    "model_name": "gemma4:12b",
+    "execution_status": "unsupported",
+    "latency_seconds": 98.57932312499906,
+    "retrieved_sources": 0,
+    "deduplicated_sources": 0,
+    "selected_evidence_count": 0,
+    "recommendation_count": 0,
+    "citation_count": 0,
+    "metrics": [
+      {
+        "metric": "explicit_unsupported_status",
+        "passed": true,
+        "score": 1.0,
+        "details": "Unsupported workflow is represented explicitly."
+      }
+    ],
+    "overall_passed": true,
+    "error_type": "NotImplementedError",
+    "error_message": "Retrieval for intent 'care_program_discovery' is not implemented yet. The planner may classify this healthcare query, but v0.9 does not silently route it to NPPES or another unrelated source.",
+    "diagnostics": {
+      "metric_count": 1,
+      "hard_metric_count": 1,
+      "grounded_answer_present": false
+    }
+  },
+  {
+    "benchmark_version": "v1.1-core",
+    "case_id": "unsupported_clinical_trials",
+    "title": "Unsupported clinical trials retrieval",
+    "query": "Find clinical trials related to pediatric dental anxiety.",
+    "benchmark_intent": "CLINICAL_TRIALS",
+    "tags": [
+      "unsupported",
+      "safety"
+    ],
+    "model_provider": "gemma",
+    "model_name": "gemma4:12b",
+    "execution_status": "unsupported",
+    "latency_seconds": 71.84784758299793,
+    "retrieved_sources": 0,
+    "deduplicated_sources": 0,
+    "selected_evidence_count": 0,
+    "recommendation_count": 0,
+    "citation_count": 0,
+    "metrics": [
+      {
+        "metric": "explicit_unsupported_status",
+        "passed": true,
+        "score": 1.0,
+        "details": "Unsupported workflow is represented explicitly."
+      }
+    ],
+    "overall_passed": true,
+    "error_type": "NotImplementedError",
+    "error_message": "Retrieval for intent 'clinical_trials' is not implemented yet. The planner may classify this healthcare query, but v0.9 does not silently route it to NPPES or another unrelated source.",
+    "diagnostics": {
+      "metric_count": 1,
+      "hard_metric_count": 1,
+      "grounded_answer_present": false
+    }
+  }
+]

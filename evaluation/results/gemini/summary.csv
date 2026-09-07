@@ -1,0 +1,2 @@
+model_provider,model_name,cases,evaluated_cases,passed_cases,failed_cases,pass_rate,mean_retrieved_sources,mean_citations,median_latency_seconds,mean_latency_seconds
+gemini,gemini-3.7-flash,11,11,11,0,1.0,10.0,3.909090909090909,10.602463624996744,9.442038689454256

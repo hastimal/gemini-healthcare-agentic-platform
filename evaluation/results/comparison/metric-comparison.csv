@@ -1,0 +1,12 @@
+metric,gemini_evaluated_cases,gemini_passed,gemini_failed,gemini_pass_rate,gemini_mean_score,gemma_evaluated_cases,gemma_passed,gemma_failed,gemma_pass_rate,gemma_mean_score
+candidate_count,4,4,0,1.0,1.0,4,4,0,1.0,1.0
+citation_presence,9,9,0,1.0,1.0,8,8,0,1.0,1.0
+citation_reference_integrity,9,9,0,1.0,1.0,8,8,0,1.0,1.0
+claim_support,4,4,0,1.0,1.0,4,4,0,1.0,1.0
+execution_success,,,,,,1,0,1,0.0,0.0
+explicit_unsupported_status,2,2,0,1.0,1.0,2,2,0,1.0,1.0
+fhir_provider_recommendation_boundary,6,6,0,1.0,1.0,5,5,0,1.0,1.0
+forbidden_claim_flags,4,4,0,1.0,1.0,4,4,0,1.0,1.0
+provider_evidence_authority,4,4,0,1.0,1.0,4,4,0,1.0,1.0
+required_source_types,8,8,0,1.0,1.0,7,7,0,1.0,1.0
+retrieval_presence,9,9,0,1.0,1.0,8,8,0,1.0,1.0

@@ -8,33 +8,46 @@ The project explores the evolution from traditional retrieval toward agentic hea
 
 ## Current Release
 
-**v1.0 — Dockerized Reproducible Demo Runtime**
+**v1.1 — Evaluation Benchmark**
 
-v1.0 packages the accepted v0.9 healthcare agent workflow into a reproducible Docker application runtime without changing the three-agent architecture, MCP retrieval paths, healthcare evidence semantics, or deterministic provider-grounding boundary.
+v1.1 adds a reproducible evaluation layer around the accepted healthcare agent workflow. The benchmark separates **application correctness** from **model/runtime behavior** and evaluates structured pipeline outputs using deterministic checks for retrieval presence, source authority, citation integrity, claim support, provider evidence boundaries, answer completeness, and healthcare safety.
 
-The same Streamlit application can now be launched in Docker with either **Gemini** or **Gemma + Ollama**:
+The frozen **v1.1 Core Acceptance Benchmark** contains 11 cases across provider discovery, biomedical research, health information, FHIR interoperability, and two intentionally unsupported workflows.
+
+Measured first-run results:
+
+| Model path | Core cases passed | Supported workflow completions | Expected unsupported boundaries | Provider discovery | FHIR | Median latency* |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Gemini 3.7 Flash | 11 / 11 | 9 / 9 | 2 / 2 | 4 / 4 | 2 / 2 | 10.602 s |
+| Gemma 4 12B via local Ollama | 10 / 11 | 8 / 9 | 2 / 2 | 4 / 4 | 1 / 2 | 167.415 s |
+
+\*Latency is a runtime diagnostic, not a model-superiority claim. Gemini was executed through a hosted API; Gemma was executed locally through LiteLLM + Ollama on an Apple M3 Pro. Gemma's single failed case was preserved as a measured **600-second local Ollama/LiteLLM timeout** in the FHIR PractitionerRole workflow; it was not a grounding, citation, provider-safety, or evidence-authority failure.
+
+Across completed applicable workflows, both model paths passed the deterministic citation, provider-grounding, provider-authority, and provider-safety checks defined by the benchmark.
+
+The benchmark does **not** claim general healthcare-AI accuracy. It is a deterministic acceptance set for this architecture and these workflow contracts.
+
+Run the full benchmark:
 
 ```bash
-./scripts/demo-docker.sh gemini
-./scripts/demo-docker.sh gemma
+python -m evaluation.benchmark --provider gemini
+python -m evaluation.benchmark --provider gemma
+python -m evaluation.comparison
 ```
 
-On macOS, the Gemma Docker path intentionally keeps Ollama native on the host and connects from the application container through `host.docker.internal:11434`. This preserves the existing native Apple Silicon model runtime while containerizing the healthcare application itself.
+Generated evidence is preserved under:
 
-The original local runtime remains supported:
-
-```bash
-./scripts/demo-local.sh gemini
-./scripts/demo-local.sh gemma
+```text
+evaluation/results/gemini/
+evaluation/results/gemma/
+evaluation/results/comparison/
 ```
+
+See `docs/releases/v1.1-evaluation-benchmark.md` for methodology, measured results, reproducibility, limitations, and research framing.
 
 Provider discovery remains evidence-restricted. NPPES supports provider identity, NPI, taxonomy, and reported location; it does not establish that a provider is “best”, board certified, actively licensed, in good standing, or offers a requested service.
 
-Containerization does not change healthcare evidence authority, privacy, security, or compliance guarantees.
-
 > **No evidence → no claim.**
-
-The original Houston pediatric-dentist question remains an acceptance/regression example. It is not application configuration.
 
 ## Project Direction
 
@@ -1145,11 +1158,11 @@ See `docs/model-portability.md` and `examples/v0.8-acceptance.md` for the archit
 
 # Next Milestone
 
-## v1.1 — Evaluation Benchmark
+## v1.2 — Kubernetes / GKE
 
-The next milestone will add repeatable evaluation around supported workflows and evidence behavior.
+The next milestone will package the accepted v1.1 application and evaluation behavior for Kubernetes and Google Kubernetes Engine without changing healthcare evidence semantics.
 
-The benchmark should measure platform behavior without turning one acceptance run into a model-quality or latency guarantee. It should preserve the same healthcare evidence boundaries and distinguish deterministic application correctness from model/runtime variability.
+Planned focus includes Kubernetes manifests or Helm, configuration and secret handling, health checks, scaling boundaries, reproducible deploy/destroy scripts, and a practical Gemini-on-GKE path. Gemma GPU deployment will remain environment-dependent rather than being forced into v1.2 solely for feature parity.
 
 # Project Goal
 

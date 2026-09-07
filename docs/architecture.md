@@ -1421,3 +1421,91 @@ Docker:
 ```
 
 The Streamlit UI, Google ADK workflow, MCP tools, evidence ranking, citations, and provider-discovery safety boundary remain shared.
+
+---
+
+# v1.1 — Evaluation Architecture
+
+v1.1 adds an evaluation layer **around** the production workflow. The benchmark does not duplicate healthcare business logic and does not change the three-agent application architecture.
+
+```mermaid
+flowchart LR
+    D["Frozen v1.1 Benchmark Dataset<br/>11 cases"] --> G["Gemini 3.7 Flash<br/>hosted API"]
+    D --> M["Gemma 4 12B<br/>LiteLLM + local Ollama"]
+    G --> A["Same 3-Agent Google ADK Platform"]
+    M --> A
+    A --> P["Search Planner Agent"]
+    P --> R["Healthcare Research Agent"]
+    R --> T["MCP Retrieval Layer"]
+    T --> N["NPPES"]
+    T --> B["PubMed"]
+    T --> F["FHIR R4"]
+    R --> E["Evidence & Answer Agent"]
+    E --> S["Structured Production State<br/>planner_output<br/>research_output<br/>answer_output"]
+    S --> AD["Production Evaluation Adapter"]
+    AD --> EV["Deterministic Evaluator"]
+    EV --> M1["Retrieval Presence"]
+    EV --> M2["Source Authority"]
+    EV --> M3["Citation Integrity"]
+    EV --> M4["Claim Support"]
+    EV --> M5["Completeness"]
+    EV --> M6["Healthcare Safety / Boundaries"]
+    EV --> O["Raw JSON + CSV + Markdown"]
+    O --> C["Gemini ↔ Gemma Comparison"]
+```
+
+## Evaluation Boundary
+
+Production code remains authoritative for query planning, retrieval routing, MCP/tool execution, evidence normalization, evidence ranking, deterministic provider grounding, citation creation, and final structured answer state.
+
+The evaluation adapter only normalizes those outputs into a stable evaluation view. Metrics inspect production behavior; they do not reimplement the provider-selection or grounding logic they are supposed to evaluate.
+
+## Benchmark Composition
+
+```text
+PROVIDER_DISCOVERY      4
+BIOMEDICAL_RESEARCH     2
+HEALTH_INFORMATION      1
+FHIR_INTEROPERABILITY   2
+CARE_PROGRAM_DISCOVERY  1 expected unsupported
+CLINICAL_TRIALS         1 expected unsupported
+```
+
+The evaluation-only `FHIR_INTEROPERABILITY` category is used to group benchmark cases. It is not an additional production `SearchIntent`.
+
+## Deterministic Metric Layer
+
+Provider-discovery cases evaluate retrieval presence, required source types, citation presence, citation-reference integrity, claim support, provider evidence authority, the FHIR provider-recommendation boundary, candidate count, and forbidden provider claims.
+
+Expected unsupported workflows pass only when the production workflow fails explicitly with the supported `NotImplementedError` boundary. Silently routing those intents into an unrelated source is a benchmark failure.
+
+## Measured Model/Runtime Paths
+
+The same frozen case set was executed once through each model path and the first complete measured runs were preserved.
+
+```text
+Gemini 3.7 Flash
+  -> hosted Gemini API
+  -> 11 / 11 core acceptance cases
+
+Gemma 4 12B
+  -> LiteLLM
+  -> local Ollama on Apple M3 Pro
+  -> 10 / 11 core acceptance cases
+  -> one FHIR PractitionerRole request exceeded the 600-second model timeout
+```
+
+The Gemma timeout is preserved as an execution failure. It is not converted into a grounding or safety failure and is not replaced by a retry result.
+
+Latency values are operational diagnostics for the measured runtime environments. They must not be interpreted as a controlled model-performance benchmark because hosted Gemini and local Gemma/Ollama run in different execution environments.
+
+## Evaluation Outputs
+
+```text
+evaluation/results/
+  gemini/
+  gemma/
+  comparison/
+```
+
+The detailed release report documents the exact generated artifacts and measured results: `docs/releases/v1.1-evaluation-benchmark.md`.
