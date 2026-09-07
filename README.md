@@ -4,6 +4,20 @@ A healthcare-focused Agentic AI platform for exploring trustworthy search, evide
 
 The project explores the evolution from traditional retrieval toward agentic healthcare search while keeping evidence provenance, source authority, interoperability boundaries, grounding, and safety explicit.
 
+## Demo
+
+The Streamlit demo exposes the complete agentic healthcare research workflow:
+
+- Search Planner Agent
+- Healthcare Research Agent
+- MCP-backed provider and PubMed retrieval
+- Evidence ranking and selection
+- Evidence & Answer Agent
+- Grounded recommendations with citations and limitations
+
+![Gemini Healthcare Agentic Search Demo](docs/images/healthcare-agentic-demo.png)
+
+
 ---
 
 ## Current Release

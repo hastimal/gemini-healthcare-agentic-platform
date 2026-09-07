@@ -48,3 +48,8 @@ shows the active model rather than pretending that an in-page dropdown can safel
 ## v0.9 behavior
 
 The same UI is used for Gemini and Gemma/Ollama. Houston pediatric dentistry is an acceptance example, not application configuration. The UI exposes Grounded Answer, Search Plan, Evidence, Citations, Transparency, and complete research output. Provider results are evidence-supported candidates, not a claim that NPPES proves who is “best”.
+
+
+## Demo UI
+
+![Healthcare Agentic AI Demo](docs/images/healthcare-agentic-demo.png)
