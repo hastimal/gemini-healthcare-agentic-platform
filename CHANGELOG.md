@@ -6,6 +6,75 @@ This project is developed incrementally. Each milestone introduces a capability 
 
 ---
 
+## [v1.1.0] - 2026-09-07
+
+### Evaluation Benchmark
+
+#### Why
+
+v1.1 introduces repeatable evaluation for the accepted healthcare agent architecture. The goal is to distinguish deterministic application correctness from model/runtime variability and to preserve measurable evidence without converting a small acceptance set into a general healthcare-AI accuracy claim.
+
+#### Added
+
+- frozen 11-case `evaluation/datasets/healthcare_benchmark.jsonl`
+- deterministic evaluation models and workflow expectations
+- benchmark runner that captures `planner_output`, `research_output`, and `answer_output`
+- production-output adapter for evaluation
+- deterministic metrics for retrieval, source authority, citations, grounding, completeness, and provider-safety boundaries
+- benchmark orchestrator
+- CSV, JSON, and Markdown reporting
+- Gemini/Gemma comparison generator
+- preserved raw first-run benchmark results under `evaluation/results/`
+- model, workflow, metric, and case comparison tables
+
+#### Core Acceptance Set
+
+```text
+Provider discovery:        4 cases
+Biomedical research:       2 cases
+Health information:        1 case
+FHIR interoperability:     2 cases
+Expected unsupported:      2 cases
+Total:                    11 cases
+```
+
+#### Measured First-Run Results
+
+```text
+Gemini 3.7 Flash:
+  11 / 11 core cases passed
+  9 / 9 supported workflows completed
+  2 / 2 unsupported workflows rejected explicitly
+
+Gemma 4 12B + local Ollama:
+  10 / 11 core cases passed
+  8 / 9 supported workflows completed
+  2 / 2 unsupported workflows rejected explicitly
+  1 supported FHIR PractitionerRole case timed out
+```
+
+The preserved Gemma failure was a 600-second LiteLLM/Ollama timeout. It was not a deterministic grounding, citation, provider-authority, or provider-safety failure.
+
+#### Evaluation Boundaries
+
+- no LLM-as-judge in the v1.1 baseline
+- acceptance pass rate is not a claim of general healthcare-AI accuracy
+- unsupported workflows pass only when explicitly rejected
+- workflow-specific metrics are evaluated only where applicable
+- latency is diagnostic and runtime-dependent
+- hosted Gemini and local Gemma/Ollama latency are not directly comparable as model-quality evidence
+- first-run failures are preserved rather than replaced by retry results
+
+#### Reproducibility
+
+```bash
+python -m evaluation.benchmark --provider gemini
+python -m evaluation.benchmark --provider gemma
+python -m evaluation.comparison
+```
+
+---
+
 ## [v1.0.0] - 2026-09-06
 
 ### Dockerized Reproducible Demo Runtime
@@ -696,19 +765,6 @@ This separation is intentional. A provider registry should not be treated as sci
 ---
 
 # Planned Milestones
-
-## v1.1.0 - Evaluation Benchmark
-
-Planned focus:
-
-- Citation accuracy
-- Groundedness
-- Retrieval relevance
-- Source authority
-- Answer completeness
-- Hallucination analysis
-- Latency
-- Cost
 
 ## v1.2.0 - Kubernetes / GKE
 

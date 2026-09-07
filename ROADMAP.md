@@ -18,25 +18,29 @@ v1.4  Security
 v2.0  Reusable Agentic Healthcare Framework
 ```
 
-## Completed: v1.0
-
-**Dockerized Reproducible Demo Runtime**
-
-v1.0 packages the accepted v0.9 application into a reproducible Docker runtime while preserving the local runtime and existing healthcare evidence semantics.
-
-Validated paths:
-
-```text
-Local  -> Gemini
-Local  -> Gemma / Ollama
-Docker -> Gemini
-Docker -> Gemma / native Ollama on macOS
-```
-
-The Docker Gemma path uses `host.docker.internal:11434` to reach native Ollama on macOS.
-
-## Next: v1.1
+## Completed: v1.1
 
 **Evaluation Benchmark**
 
-Add repeatable evaluation around supported workflows while keeping deterministic application correctness separate from model/runtime variability.
+v1.1 adds a frozen 11-case Core Acceptance Benchmark around the accepted healthcare agent workflow and keeps deterministic application correctness separate from model/runtime variability.
+
+Measured first-run acceptance:
+
+```text
+Gemini 3.7 Flash: 11 / 11 core cases
+  - 9 / 9 supported workflow completions
+  - 2 / 2 expected unsupported boundaries
+
+Gemma 4 12B + local Ollama: 10 / 11 core cases
+  - 8 / 9 supported workflow completions
+  - 2 / 2 expected unsupported boundaries
+  - 1 preserved FHIR PractitionerRole timeout
+```
+
+The benchmark evaluates retrieval presence, required source types, citation integrity, claim support, provider evidence authority, FHIR provider-recommendation boundaries, candidate-count expectations, and forbidden provider claims. Latency is retained as runtime diagnostic data rather than a model-superiority claim.
+
+## Next: v1.2
+
+**Kubernetes / GKE**
+
+Deploy the accepted application runtime to Kubernetes / GKE with reproducible configuration, health checks, scaling boundaries, secret handling, and deploy/destroy workflows.
