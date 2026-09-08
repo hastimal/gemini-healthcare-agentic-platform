@@ -119,7 +119,134 @@ On macOS, the healthcare application is containerized while Ollama remains nativ
 
 This topology does not automatically make the application HIPAA compliant, PHI-safe, secure, private, or production-ready.
 
-## 7. Understand query planning
+## 7. Deploy and run on Google Kubernetes Engine
+
+v1.2 adds a cloud-native runtime around the same Gemini + Google ADK three-agent application.
+
+The important separation is:
+
+    AGENT INTELLIGENCE
+    Gemini + Google ADK + MCP
+              |
+              v
+    APPLICATION
+    Python + Streamlit
+              |
+              v
+    CONTAINER
+    Docker
+              |
+              v
+    ORCHESTRATION
+    Kubernetes
+              |
+              v
+    GOOGLE CLOUD
+    Google Kubernetes Engine (GKE)
+
+The Kubernetes resources live under:
+
+    deployment/kubernetes/
+
+They include:
+
+    namespace.yaml
+    configmap.yaml
+    secret.example.yaml
+    deployment.yaml
+    service.yaml
+
+The GKE deployment includes:
+
+- CPU and memory requests/limits
+- readiness probe
+- liveness probe
+- Streamlit port `8501`
+- ConfigMap-based runtime configuration
+- Secret injection
+- Kubernetes Service routing
+
+The health endpoint is:
+
+    /_stcore/health
+
+A healthy runtime should show approximately:
+
+    Pod:         1/1 Running
+    Restarts:    0
+    Deployment:  1/1 Available
+
+The deployment layer does not create another AI agent. The platform still has exactly three core Google ADK agents.
+
+## 8. Run an on-demand public GKE demo
+
+The application does not need a permanent public IP.
+
+For normal private cluster access, the Service can use:
+
+    ClusterIP
+
+When a public demo is needed, use:
+
+    ./scripts/demo-up.sh
+
+The script changes the Service to `LoadBalancer`, waits for GKE to assign an external IP, discovers that IP automatically, and prints the current demo URL.
+
+The flow is:
+
+    Need Demo
+       |
+       v
+    ClusterIP
+       |
+       v
+    LoadBalancer
+       |
+       v
+    GKE assigns external IP
+       |
+       v
+    Script discovers IP
+       |
+       v
+    Streamlit UI
+       |
+       v
+    Google ADK + Gemini Demo
+
+After the demo, run:
+
+    ./scripts/demo-down.sh
+
+This returns the Service to `ClusterIP`.
+
+The external IP is intentionally not hard-coded because a newly created GKE environment can receive a different address.
+
+Useful Kubernetes demo helpers include:
+
+    ./scripts/demo-k8s.sh
+    ./scripts/demo-k8s-status.sh
+    ./scripts/demo-k8s-stop.sh
+    ./scripts/demo-up.sh
+    ./scripts/demo-down.sh
+
+This v1.2 milestone demonstrates the progression:
+
+    Local Python
+        |
+        v
+    Docker
+        |
+        v
+    Kubernetes
+        |
+        v
+    Google Kubernetes Engine
+        |
+        v
+    On-Demand Public Demo
+
+## 9. Understand query planning
 
 The configured model infers the query intent plus optional location, optional specialty, and generated queries. Deterministic code then normalizes, deduplicates, and caps the plan.
 
@@ -134,7 +261,7 @@ pediatric dentist -> Pediatric Dentistry
 
 Unknown specialties pass through rather than being silently rewritten into unrelated specialties.
 
-## 8. Understand retrieval routing
+## 10. Understand retrieval routing
 
 ```text
 PROVIDER_DISCOVERY
@@ -159,7 +286,7 @@ CLINICAL_TRIALS
 
 An unsupported workflow should fail explicitly instead of being silently routed into an unrelated connector.
 
-## 9. Understand evidence authority
+## 11. Understand evidence authority
 
 ### NPPES
 
@@ -175,7 +302,7 @@ PubMed supports general biomedical/scientific context. A paper about childhood d
 
 Public HAPI FHIR data demonstrates interoperability and resource structure. It is not authoritative provider-quality evidence and must not be promoted into provider recommendations.
 
-## 10. Understand the v1.1 evaluation dataset
+## 12. Understand the v1.1 evaluation dataset
 
 The benchmark dataset is:
 
@@ -197,7 +324,7 @@ It contains:
 
 The runner sends only the case query to production. Expected location/specialty values are not injected because doing so would hide planner failures.
 
-## 11. Run one smoke benchmark
+## 13. Run one smoke benchmark
 
 Gemini:
 
@@ -217,7 +344,7 @@ python -m evaluation.benchmark \
 
 Smoke runs are for debugging. Keep them separate from preserved full benchmark evidence.
 
-## 12. Run the full Gemini benchmark
+## 14. Run the full Gemini benchmark
 
 ```bash
 python -m evaluation.benchmark --provider gemini
@@ -242,7 +369,7 @@ metric-summary.csv
 results.md
 ```
 
-## 13. Run the full Gemma benchmark
+## 15. Run the full Gemma benchmark
 
 Confirm Ollama first:
 
@@ -270,7 +397,7 @@ caffeinate -dimsu
 
 Do not overwrite a measured first-run failure with a later successful retry. A retry should be stored as a separate recovery experiment.
 
-## 14. Generate Gemini/Gemma comparison tables
+## 16. Generate Gemini/Gemma comparison tables
 
 After both full result directories exist:
 
@@ -290,7 +417,7 @@ evaluation/results/comparison/model-comparison.md
 
 These files are generated from stored benchmark results. Do not manually rewrite measured values.
 
-## 15. Understand the provider metrics
+## 17. Understand the provider metrics
 
 Provider discovery currently evaluates:
 
@@ -310,7 +437,7 @@ Other workflows receive only metrics applicable to their contracts.
 
 A blank metric in a cross-model comparison can mean **not applicable**, not zero.
 
-## 16. Read unsupported passes correctly
+## 18. Read unsupported passes correctly
 
 The expected unsupported workflows are:
 
@@ -328,7 +455,7 @@ Therefore Gemini's measured `11 / 11` does **not** mean 11 successful healthcare
 2 unsupported workflows rejected correctly
 ```
 
-## 17. Read the preserved v1.1 results correctly
+## 19. Read the preserved v1.1 results correctly
 
 ```text
 Gemini 3.7 Flash
@@ -364,7 +491,7 @@ Gemini passed 11/11 cases on the frozen v1.1 Core Acceptance Benchmark.
 Gemma passed 10/11 cases on the same benchmark.
 ```
 
-## 18. Treat latency as diagnostic data
+## 20. Treat latency as diagnostic data
 
 The runtime paths are different:
 
@@ -377,7 +504,7 @@ Gemma's mean also includes a timeout.
 
 The measured latency is useful operational evidence, not a controlled model-superiority benchmark.
 
-## 19. Debug a failed benchmark case
+## 21. Debug a failed benchmark case
 
 The runner preserves:
 
@@ -402,7 +529,7 @@ Inspect failures in this order:
 
 This helps separate planning, retrieval, grounding, citation, and runtime failures.
 
-## 20. Add a benchmark case
+## 22. Add a benchmark case
 
 Edit:
 
@@ -423,7 +550,7 @@ unsupported workflows reject explicitly
 
 Avoid requiring an exact live NPPES/PubMed result count.
 
-## 21. Add a metric
+## 23. Add a metric
 
 Implement metrics under:
 
@@ -439,7 +566,7 @@ evaluation/orchestrator.py
 
 A metric should inspect normalized production outputs rather than duplicate the production business logic it is evaluating.
 
-## 22. Validate evaluation changes
+## 24. Validate evaluation changes
 
 Run focused tests:
 
@@ -463,7 +590,7 @@ git diff --check
 
 Do not rerun expensive live Gemini/Gemma benchmarks unless the production or evaluation behavior being measured changed.
 
-## 23. Preserve research evidence
+## 25. Preserve research evidence
 
 Keep these concepts separate in Git history:
 
@@ -476,7 +603,7 @@ documentation
 
 A first-run failure is evidence. Do not silently replace it.
 
-## 24. Extend beyond the v1.1 acceptance set
+## 26. Extend beyond the v1.1 acceptance set
 
 The 11-case benchmark is a software acceptance set, not a statistically comprehensive healthcare-AI study.
 
@@ -496,7 +623,7 @@ appropriate statistical analysis
 
 Keep that research dataset separate from the v1.1 Core Acceptance Benchmark so the original release evidence remains reproducible.
 
-## 25. Safe extension order
+## 27. Safe extension order
 
 When adding a source or workflow:
 

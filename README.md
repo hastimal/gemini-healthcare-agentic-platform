@@ -22,7 +22,63 @@ The Streamlit demo exposes the complete agentic healthcare research workflow:
 
 ## Current Release
 
-**v1.1 — Evaluation Benchmark**
+**v1.2 — Taking Gemini Healthcare Agents to Google Kubernetes Engine (GKE)**
+
+v1.2 takes the accepted Gemini + Google ADK healthcare agent workflow from local and Docker execution to a cloud-native deployment on **Google Kubernetes Engine (GKE)**.
+
+The healthcare architecture remains evidence-restricted and uses the same three core Google ADK agents. v1.2 adds the deployment layer around that architecture:
+
+    Gemini
+      |
+      v
+    Google ADK 3-Agent Workflow
+      |
+      v
+    MCP Healthcare Tools
+      |
+      +--> NPPES
+      +--> PubMed
+      +--> FHIR R4
+      |
+      v
+    Grounded Answer + Citations
+
+    CLOUD-NATIVE RUNTIME
+
+    Docker Image
+        |
+        v
+    Kubernetes
+        |
+        v
+    Google Kubernetes Engine (GKE)
+        |
+        v
+    Kubernetes Service
+        |
+        v
+    On-Demand GKE LoadBalancer
+        |
+        v
+    Streamlit Demo
+
+### v1.2 GKE Highlights
+
+- Google Kubernetes Engine deployment
+- Kubernetes Namespace, ConfigMap, Secret template, Deployment, and Service
+- CPU and memory requests and limits
+- readiness and liveness probes using `/_stcore/health`
+- Gemini + Google ADK execution inside GKE
+- MCP-backed NPPES, PubMed, and FHIR retrieval
+- dynamic GKE LoadBalancer endpoint for public demos
+- no hard-coded external IP
+- enhanced Streamlit agent-workflow visualization
+- end-to-end Gemini UI validation: **5/5 passed**
+- validated GKE Pod: **1/1 Running, 0 restarts**
+
+The demo can remain private with `ClusterIP` and temporarily switch to `LoadBalancer` only when a public demo is needed.
+
+### Previous Milestone — v1.1 Evaluation Benchmark
 
 v1.1 adds a reproducible evaluation layer around the accepted healthcare agent workflow. The benchmark separates **application correctness** from **model/runtime behavior** and evaluates structured pipeline outputs using deterministic checks for retrieval presence, source authority, citation integrity, claim support, provider evidence boundaries, answer completeness, and healthcare safety.
 
@@ -1227,11 +1283,42 @@ See `docs/model-portability.md` and `examples/v0.8-acceptance.md` for the archit
 
 # Next Milestone
 
-## v1.2 — Kubernetes / GKE
+## v1.3 — Observability with OpenTelemetry
 
-The next milestone will package the accepted v1.1 application and evaluation behavior for Kubernetes and Google Kubernetes Engine without changing healthcare evidence semantics.
+The next milestone will make the accepted Gemini + Google ADK + GKE workflow observable without changing healthcare evidence semantics.
 
-Planned focus includes Kubernetes manifests or Helm, configuration and secret handling, health checks, scaling boundaries, reproducible deploy/destroy scripts, and a practical Gemini-on-GKE path. Gemma GPU deployment will remain environment-dependent rather than being forced into v1.2 solely for feature parity.
+Planned focus includes:
+
+- OpenTelemetry instrumentation
+- Google ADK agent traces
+- model-call timing
+- MCP tool-call traces
+- retrieval timing
+- error and retry visibility
+- end-to-end workflow traces
+- cloud-native observability for the GKE runtime
+
+The goal is to make the full execution path inspectable:
+
+    User
+      |
+      v
+    Google ADK Agent
+      |
+      v
+    MCP Tool
+      |
+      v
+    Healthcare Evidence
+      |
+      v
+    Gemini
+      |
+      v
+    Grounded Answer
+      |
+      v
+    OpenTelemetry Trace
 
 # Project Goal
 
