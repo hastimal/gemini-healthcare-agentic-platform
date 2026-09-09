@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from typing import Any
 
 from opentelemetry import trace
@@ -15,6 +16,7 @@ from opentelemetry.sdk.trace.export import (
     ConsoleSpanExporter,
     SimpleSpanProcessor,
 )
+from opentelemetry.trace import Span, Status, StatusCode
 
 SERVICE_NAME = "gemini-healthcare-agentic-platform"
 
@@ -104,3 +106,37 @@ def get_tracer():
     return trace.get_tracer(
         "gemini_healthcare_agentic_platform"
     )
+
+
+@contextmanager
+def traced_span(
+    name: str,
+    *,
+    attributes: Mapping[str, Any] | None = None,
+) -> Iterator[Span]:
+    """
+    Create an OpenTelemetry span using approved operational metadata only.
+
+    Healthcare questions, prompts, provider names, retrieved content, and
+    grounded answers must not be passed as span attributes.
+    """
+
+    tracer = get_tracer()
+
+    with tracer.start_as_current_span(name) as span:
+        for key, value in safe_span_attributes(attributes).items():
+            span.set_attribute(key, value)
+
+        try:
+            yield span
+
+        except Exception as exc:
+            span.record_exception(exc)
+            span.set_attribute(
+                "error.type",
+                type(exc).__name__,
+            )
+            span.set_status(
+                Status(StatusCode.ERROR)
+            )
+            raise
