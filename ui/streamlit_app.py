@@ -6,11 +6,14 @@ from collections import Counter
 from typing import Any
 
 import streamlit as st
+from google.adk.apps import App
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 
 from agents.workflows.healthcare_workflow import root_agent
 from app.config import get_settings
+from observability.adk_callbacks import PrivacySafeObservabilityPlugin
+from observability.tracing import configure_tracing
 
 DEFAULT_QUESTION = (
     "Find three pediatric dentists in Houston for a child who is scared "
@@ -54,9 +57,20 @@ def _query_texts(generated_queries: list[Any]) -> list[str]:
 async def _run_workflow(question: str) -> dict[str, Any]:
     session_id = f"ui-{uuid.uuid4()}"
 
+    configure_tracing()
+
+    observability_plugin = PrivacySafeObservabilityPlugin()
+
+    app = App(
+        name=APP_NAME,
+        root_agent=root_agent,
+        plugins=[
+            observability_plugin,
+        ],
+    )
+
     runner = InMemoryRunner(
-        app_name=APP_NAME,
-        agent=root_agent,
+        app=app,
     )
 
     session = await runner.session_service.create_session(
@@ -136,6 +150,7 @@ async def _run_workflow(question: str) -> dict[str, Any]:
         "research_output": state.get("research_output"),
         "answer_output": state.get("answer_output"),
         "event_log": event_log,
+        "trace_id": observability_plugin.trace_id,
     }
 
 
@@ -987,6 +1002,12 @@ def main() -> None:
             st.caption(
                 "Completed research question: "
                 f"{completed_question}"
+            )
+
+        trace_id = result.get("trace_id")
+        if trace_id:
+            st.caption(
+                f"OpenTelemetry Trace ID: `{trace_id}`"
             )
 
         _render_results(

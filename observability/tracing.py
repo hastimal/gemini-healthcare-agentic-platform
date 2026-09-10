@@ -18,10 +18,18 @@ from opentelemetry.sdk.trace.export import (
 )
 from opentelemetry.trace import Span, Status, StatusCode
 
+from observability.privacy_exporter import PrivacySafeSpanExporter
+
 SERVICE_NAME = "gemini-healthcare-agentic-platform"
 
+_TRACING_CONFIGURED = False
+
 _ALLOWED_ATTRIBUTE_KEYS = {
+    "workflow.name",
     "workflow.stage",
+    "agent.name",
+    "gen_ai.model.name",
+    "gen_ai.model.provider",
     "healthcare.intent",
     "retrieval.source_type",
     "retrieval.result_count",
@@ -59,8 +67,13 @@ def safe_span_attributes(
 
 
 def configure_tracing() -> bool:
+    global _TRACING_CONFIGURED
+
     if not tracing_enabled():
         return False
+
+    if _TRACING_CONFIGURED:
+        return True
 
     resource = Resource.create(
         {
@@ -81,14 +94,18 @@ def configure_tracing() -> bool:
     if exporter_name == "console":
         provider.add_span_processor(
             SimpleSpanProcessor(
-                ConsoleSpanExporter()
+                PrivacySafeSpanExporter(
+                    ConsoleSpanExporter()
+                )
             )
         )
 
     elif exporter_name == "otlp":
         provider.add_span_processor(
             BatchSpanProcessor(
-                OTLPSpanExporter()
+                PrivacySafeSpanExporter(
+                    OTLPSpanExporter()
+                )
             )
         )
 
@@ -98,6 +115,7 @@ def configure_tracing() -> bool:
         )
 
     trace.set_tracer_provider(provider)
+    _TRACING_CONFIGURED = True
 
     return True
 
