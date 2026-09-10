@@ -26,6 +26,7 @@ from models import (
     SearchResult,
     UserQuery,
 )
+from observability.tracing import traced_span
 from search.deduplication import deduplicate_results
 from search.location import parse_us_provider_location
 from search.retrieval import HealthcareRetrievalOrchestrator
@@ -135,12 +136,27 @@ class MCPHealthcareRetrievalOrchestrator:
 
             city, state = parse_us_provider_location(user_query.location)
 
-            provider_results = await self.provider_client.search(
-                taxonomy_description=specialty,
-                city=city,
-                state=state,
-                limit=provider_limit,
-            )
+            with traced_span(
+                "mcp.provider_search",
+                attributes={
+                    "workflow.stage": "healthcare_research",
+                    "healthcare.intent": intent.value,
+                    "retrieval.source_type": "nppes",
+                    "mcp.tool.name": "find_healthcare_providers",
+                },
+            ) as span:
+                provider_results = await self.provider_client.search(
+                    taxonomy_description=specialty,
+                    city=city,
+                    state=state,
+                    limit=provider_limit,
+                )
+
+                span.set_attribute(
+                    "retrieval.result_count",
+                    len(provider_results),
+                )
+
             results.extend(provider_results)
 
         # -------------------------------------------------------------
@@ -164,20 +180,50 @@ class MCPHealthcareRetrievalOrchestrator:
             )
 
             if should_search_pubmed:
-                pubmed_results = await self.pubmed_client.search(
-                    query=search_query.query,
-                    max_results=pubmed_limit,
-                )
+                with traced_span(
+                    "mcp.pubmed_search",
+                    attributes={
+                        "workflow.stage": "healthcare_research",
+                        "healthcare.intent": intent.value,
+                        "retrieval.source_type": "pubmed",
+                        "mcp.tool.name": "search_biomedical_literature",
+                    },
+                ) as span:
+                    pubmed_results = await self.pubmed_client.search(
+                        query=search_query.query,
+                        max_results=pubmed_limit,
+                    )
+
+                    span.set_attribute(
+                        "retrieval.result_count",
+                        len(pubmed_results),
+                    )
+
                 results.extend(pubmed_results)
 
             if not fhir_retrieved and self._is_fhir_query(search_query):
-                fhir_results = await self._retrieve_fhir(
-                    search_query=search_query,
-                    user_query=user_query,
-                    city=city,
-                    state=state,
-                    limit=fhir_limit,
-                )
+                with traced_span(
+                    "mcp.fhir_search",
+                    attributes={
+                        "workflow.stage": "healthcare_research",
+                        "healthcare.intent": intent.value,
+                        "retrieval.source_type": "fhir",
+                        "mcp.tool.name": "search_fhir_resources",
+                    },
+                ) as span:
+                    fhir_results = await self._retrieve_fhir(
+                        search_query=search_query,
+                        user_query=user_query,
+                        city=city,
+                        state=state,
+                        limit=fhir_limit,
+                    )
+
+                    span.set_attribute(
+                        "retrieval.result_count",
+                        len(fhir_results),
+                    )
+
                 results.extend(fhir_results)
                 fhir_retrieved = True
 
