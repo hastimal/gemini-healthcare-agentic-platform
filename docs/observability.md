@@ -1,89 +1,89 @@
-﻿# OpenTelemetry Observability
+# OpenTelemetry Observability
 
 The Gemini Healthcare Agentic Platform uses OpenTelemetry to provide
-privacy-conscious tracing across the healthcare agent workflow.
+privacy-conscious tracing and operational metrics across the healthcare agent workflow.
 
-## Current v1.3 tracing
-
-This contribution adds tracing for the MCP-backed healthcare retrieval layer:
-
-- `mcp.provider_search` - NPPES provider retrieval
-- `mcp.pubmed_search` - PubMed biomedical literature retrieval
-- `mcp.fhir_search` - FHIR interoperability retrieval
-
-## Privacy
-
-Tracing records operational metadata only.
-
-Allowed examples:
-
-- workflow stage
-- healthcare intent
-- retrieval source type
-- retrieval result count
-- evidence selected count
-- MCP tool name
-- retry count
-- error type
-
-The platform does not intentionally export:
-
-- healthcare questions
-- prompts
-- model responses
-- grounded answer text
-- provider names
-- retrieved documents
-- API keys or secrets
-
-## Local tracing
-
-Tracing is disabled by default.
-
-### PowerShell
-
-```powershell
-$env:OTEL_TRACING_ENABLED="true"
-$env:OTEL_TRACES_EXPORTER="console"
-```
-
-### Bash
-
-```bash
-export OTEL_TRACING_ENABLED=true
-export OTEL_TRACES_EXPORTER=console
-```
-
-The console exporter is useful for local development.
-
-The tracing foundation also supports OTLP export for deployment environments.
+> **Privacy-first observability**: Traces record operational metadata such as agent name, workflow stage, model name, counts, timing, retries, and errors. User questions, prompts, model responses, provider names, retrieved documents, grounded answers, patient data, and secrets are intentionally excluded from telemetry.
 
 ## Architecture
 
 ```text
-Healthcare Agent Workflow
-        |
-        v
-MCP Retrieval Layer
-        |
-        +-- NPPES
-        +-- PubMed
-        +-- FHIR
-        |
-        v
-OpenTelemetry Spans
-        |
-        v
-OTLP Export
+User Request
+    |
+    v
+Streamlit Healthcare UI :8501
+    |
+    v
+OpenTelemetry Workflow Trace
+    |
+    +-- Google ADK: Search Planner Agent
+    |      |
+    |      +-- Gemini Model Call
+    |
+    +-- Google ADK: Healthcare Research Agent
+    |      |
+    |      +-- Gemini Model Call
+    |      |
+    |      +-- MCP Provider Search -> NPPES
+    |      +-- MCP PubMed Search -> PubMed
+    |      +-- MCP FHIR Search -> FHIR R4
+    |
+    +-- Google ADK: Evidence & Answer Agent
+           |
+           +-- Gemini Model Call
+           +-- Evidence Ranking
+           +-- Grounded Answer
+    |
+    v
+OpenTelemetry Collector :4317 / :4318
+    |
+    +-- Tempo :3200 -> traces
+    +-- Prometheus :9090 -> metrics
+    +-- Grafana :3000 -> dashboards
 ```
 
-## Google Cloud
+## Trace Structure
 
-The next v1.3 integration stage connects OpenTelemetry tracing with:
+- `workflow.gemini_healthcare_agentic_platform`: Top-level workflow trace containing the overall execution lifecycle.
+- `adk.agent.<agent_name>`: Google ADK agent lifecycle spans for:
+  - `search_planner_agent`
+  - `healthcare_research_agent`
+  - `evidence_answer_agent`
+- `gen_ai.model`: Sanitized Gemini model call spans recording model name, token counts, and latency without prompts or responses.
+- `mcp.provider_search`: NPPES healthcare provider search tool span.
+- `mcp.pubmed_search`: PubMed biomedical literature retrieval tool span.
+- `mcp.fhir_search`: FHIR interoperability retrieval tool span.
 
-- Gemini
-- Google ADK
-- Google Kubernetes Engine (GKE)
-- Google Cloud Trace
-- Google Cloud Monitoring
-- Google Cloud Logging
+Note: Evidence ranking is a processing stage inside the Evidence & Answer Agent, not a fourth agent.
+
+## Privacy Boundary and Sanitization
+
+Google ADK and OpenTelemetry SDKs can emit attributes containing raw inputs and outputs.
+To protect patient privacy and comply with healthcare standards:
+
+1. `PrivacySafeSpanExporter`: Wraps exporters to sanitize all spans before export. Any forbidden attributes such as `gcp.vertex.agent.llm_request`, `gcp.vertex.agent.llm_response`, `gcp.vertex.agent.tool_call_args`, and `gcp.vertex.agent.tool_response` are stripped.
+2. `PrivacySafeObservabilityPlugin`: Custom ADK plugin replacing `AutoTracingPlugin` to ensure prompt texts, grounded answers, provider names, and FHIR payloads are never captured.
+3. Telemetry only exports whitelisted operational metadata keys (`workflow.name`, `workflow.stage`, `agent.name`, `gen_ai.model.name`, `gen_ai.model.provider`, `healthcare.intent`, `retrieval.source_type`, `retrieval.result_count`, `evidence.selected_count`, `mcp.tool.name`, `retry.count`, `error.type`).
+
+## Local Observability Stack
+
+The entire observability stack runs locally via Docker Compose:
+
+- **OpenTelemetry Collector** (`:4317` gRPC, `:4318` HTTP): Receives OTLP telemetry from `healthcare-app`, batches traces, exports to Tempo, and provides scrape targets for Prometheus.
+- **Grafana Tempo** (`:3200`): Local trace store retaining traces in local volumes.
+- **Prometheus** (`:9090`): Collects collector telemetry and operational metrics.
+- **Grafana** (`:3000`): Pre-provisioned with Tempo and Prometheus datasources, the pre-built dashboard **Gemini Healthcare Agentic Platform — Local Agent Observability**, and **Grafana Explore** (`/explore`) for interactive trace and metric queries.
+
+> **Security Note:** `GF_AUTH_ANONYMOUS_ORG_ROLE=Editor` is enabled only for the localhost developer demo so Grafana Explore works without login. Do not use anonymous Editor access when Grafana is publicly exposed or deployed to a shared environment.
+
+### Running the Stack
+
+```bash
+./scripts/demo-docker.sh
+```
+
+Stop with:
+
+```bash
+./scripts/demo-docker-stop.sh
+```

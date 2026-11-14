@@ -22,7 +22,74 @@ The Streamlit demo exposes the complete agentic healthcare research workflow:
 
 ## Current Release
 
-**v1.2 — Taking Gemini Healthcare Agents to Google Kubernetes Engine (GKE)**
+**v1.3 — Local Agent Observability with OpenTelemetry, Tempo, Prometheus, and Grafana**
+
+v1.3 completes end-to-end **local agent observability** for the Gemini-powered healthcare agent workflow. All telemetry stays local in Docker, requiring zero Google Cloud observability infrastructure.
+
+> **Privacy-first observability**: Traces record operational metadata such as agent name, workflow stage, model name, counts, timing, retries, and errors. User questions, prompts, model responses, provider names, retrieved documents, grounded answers, patient data, and secrets are intentionally excluded from telemetry.
+
+### v1.3 Architecture
+
+```text
+User Request
+    |
+    v
+Streamlit Healthcare UI :8501
+    |
+    v
+OpenTelemetry Workflow Trace
+    |
+    +-- Google ADK: Search Planner Agent
+    |      |
+    |      +-- Gemini Model Call
+    |
+    +-- Google ADK: Healthcare Research Agent
+    |      |
+    |      +-- Gemini Model Call
+    |      |
+    |      +-- MCP Provider Search -> NPPES
+    |      +-- MCP PubMed Search -> PubMed
+    |      +-- MCP FHIR Search -> FHIR R4
+    |
+    +-- Google ADK: Evidence & Answer Agent
+           |
+           +-- Gemini Model Call
+           +-- Evidence Ranking
+           +-- Grounded Answer
+    |
+    v
+OpenTelemetry Collector :4317 / :4318
+    |
+    +-- Tempo :3200 (traces)
+    +-- Prometheus :9090 (metrics)
+    +-- Grafana :3000 (dashboards & Tempo/Prometheus datasources)
+```
+
+### Running the Local Observability Stack
+
+Start the complete stack with:
+
+```bash
+./scripts/demo-docker.sh
+```
+
+Stop the stack cleanly with:
+
+```bash
+./scripts/demo-docker-stop.sh
+```
+
+Local endpoints:
+- Streamlit Healthcare UI: `http://localhost:8501`
+- Grafana Dashboards: `http://localhost:3000` (auto-provisioned Tempo & Prometheus datasources and dashboard)
+- Prometheus UI: `http://localhost:9090`
+- Tempo: `http://localhost:3200`
+
+---
+
+## Previous Releases
+
+### v1.2 — Taking Gemini Healthcare Agents to Google Kubernetes Engine (GKE)
 
 v1.2 takes the accepted Gemini + Google ADK healthcare agent workflow from local and Docker execution to a cloud-native deployment on **Google Kubernetes Engine (GKE)**.
 
