@@ -7,9 +7,9 @@ cd "$ROOT_DIR"
 MODE="${1:-gemini}"
 PORT="${DEMO_PORT:-8501}"
 
-if [[ "$MODE" != "gemini" && "$MODE" != "gemma" ]]; then
-  echo "Usage: ./scripts/demo-docker.sh [gemini|gemma]"
-  exit 1
+if [[ "$MODE" != "gemini" ]]; then
+  echo "Notice: v1.3 local observability is Gemini-only. Running in gemini mode."
+  MODE="gemini"
 fi
 
 if [[ ! -f .env ]]; then
@@ -23,85 +23,70 @@ set -a
 source .env
 set +a
 
-if [[ "$MODE" == "gemini" ]]; then
-  if [[ -z "${GEMINI_API_KEY:-}" ]]; then
-    echo "ERROR: GEMINI_API_KEY is not configured in .env."
-    exit 1
-  fi
-  if [[ -z "${GEMINI_MODEL:-}" ]]; then
-    echo "ERROR: GEMINI_MODEL is not configured in .env."
-    exit 1
-  fi
-  export MODEL_PROVIDER="gemini"
-else
-  export MODEL_PROVIDER="gemma"
-  export GEMMA_MODEL="${GEMMA_MODEL:-gemma4:12b}"
-  export OLLAMA_BASE_URL="http://host.docker.internal:11434"
-
-  if ! curl -fsS "http://localhost:11434/api/tags" >/dev/null 2>&1; then
-    echo "ERROR: native Ollama is not reachable at http://localhost:11434."
-    echo "Start Ollama on macOS, then retry."
-    exit 1
-  fi
-
-  if ! curl -fsS "http://localhost:11434/api/tags" | grep -q "\"name\":\"${GEMMA_MODEL}\""; then
-    echo "ERROR: ${GEMMA_MODEL} is not installed in native Ollama."
-    echo "Install it with: ollama pull ${GEMMA_MODEL}"
-    exit 1
-  fi
+if [[ -z "${GEMINI_API_KEY:-}" ]]; then
+  echo "ERROR: GEMINI_API_KEY is not configured in .env."
+  exit 1
 fi
-
+if [[ -z "${GEMINI_MODEL:-}" ]]; then
+  echo "ERROR: GEMINI_MODEL is not configured in .env."
+  exit 1
+fi
+export MODEL_PROVIDER="gemini"
 export DEMO_PORT="$PORT"
 
-echo "Building and starting Dockerized healthcare demo..."
-docker compose up --build -d healthcare-app
+echo "Building and starting local Dockerized healthcare observability stack..."
+docker compose up --build -d
 
-echo "Waiting for Streamlit health check..."
-for _ in $(seq 1 60); do
-  CONTAINER_ID="$(docker compose ps -q healthcare-app)"
-  STATUS="$(docker inspect --format='{{.State.Health.Status}}' "$CONTAINER_ID" 2>/dev/null || true)"
-  if [[ "$STATUS" == "healthy" ]]; then
-    echo
-    echo "============================================================"
-    echo " Docker Healthcare Agentic Platform READY"
-    echo "============================================================"
-    if [[ "$MODE" == "gemini" ]]; then
-      echo " Model: GEMINI"
-      echo " Gemini model: ${GEMINI_MODEL}"
-    else
-      echo " Model: GEMMA"
-      echo " Gemma model: ${GEMMA_MODEL}"
-      echo " Ollama: native macOS via host.docker.internal:11434"
+echo "Waiting for services to become healthy..."
+SERVICES=("tempo" "prometheus" "otel-collector" "grafana" "healthcare-app")
+
+for svc in "${SERVICES[@]}"; do
+  echo "Checking health for $svc..."
+  for _ in $(seq 1 60); do
+    CONTAINER_ID="$(docker compose ps -q "$svc" 2>/dev/null || true)"
+    if [[ -z "$CONTAINER_ID" ]]; then
+      sleep 2
+      continue
     fi
-    echo
-    printf "[1;32m"
-    echo " ┌──────────────────────────────────────────────┐"
-    echo " │  ✓ DOCKER DEMO READY                        │"
-    printf " │  OPEN: http://localhost:%-20s │
-" "$PORT"
-    echo " └──────────────────────────────────────────────┘"
-    printf "[0m"
-    echo
-    echo " Logs: docker compose logs -f healthcare-app"
-    echo " Stop: ./scripts/demo-docker-stop.sh"
-    echo "============================================================"
-
-    if command -v open >/dev/null 2>&1; then
-      open "http://localhost:$PORT" >/dev/null 2>&1 || true
+    STATUS="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$CONTAINER_ID" 2>/dev/null || true)"
+    if [[ "$STATUS" == "healthy" || "$STATUS" == "running" ]]; then
+      # If container has healthcheck, wait until it is 'healthy'
+      HAS_HEALTHCHECK="$(docker inspect --format='{{if .State.Health}}yes{{else}}no{{end}}' "$CONTAINER_ID" 2>/dev/null || true)"
+      if [[ "$HAS_HEALTHCHECK" == "yes" && "$STATUS" != "healthy" ]]; then
+        sleep 2
+        continue
+      fi
+      break
     fi
-    exit 0
-  fi
 
-  if [[ "$STATUS" == "unhealthy" ]]; then
-    echo "ERROR: container became unhealthy."
-    docker compose logs --tail=120 healthcare-app || true
-    exit 1
-  fi
-
-  sleep 2
+    if [[ "$STATUS" == "unhealthy" || "$STATUS" == "exited" ]]; then
+      echo "ERROR: $svc became $STATUS."
+      docker compose logs --tail=50 "$svc" || true
+      exit 1
+    fi
+    sleep 2
+  done
 done
 
-echo "ERROR: Dockerized GUI did not become healthy in time."
-docker compose ps
-docker compose logs --tail=120 healthcare-app || true
-exit 1
+echo
+echo "============================================================"
+echo " Gemini Healthcare Agentic Platform READY"
+echo "============================================================"
+echo " Healthcare UI: http://localhost:${PORT}"
+echo " Grafana:       http://localhost:3000"
+echo " Prometheus:    http://localhost:9090"
+echo " Tempo:         http://localhost:3200"
+echo
+echo " Model: GEMINI"
+echo " Gemini model: ${GEMINI_MODEL}"
+echo
+echo " Logs:"
+echo " docker compose logs -f"
+echo
+echo " Stop:"
+echo " ./scripts/demo-docker-stop.sh"
+echo "============================================================"
+
+if command -v open >/dev/null 2>&1; then
+  open "http://localhost:$PORT" >/dev/null 2>&1 || true
+fi

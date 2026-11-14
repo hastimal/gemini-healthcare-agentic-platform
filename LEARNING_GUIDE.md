@@ -95,18 +95,62 @@ Open:
 http://localhost:8501
 ```
 
-## 6. Run the Docker application
+## 6. Run the Docker application with Local Observability
 
-Gemini:
+v1.3 runs the full application and observability stack locally in Docker:
 
-```bash
-./scripts/demo-docker.sh gemini
+- `healthcare-app`: Streamlit healthcare UI
+- `otel-collector`: OpenTelemetry Collector
+- `tempo`: Distributed trace storage
+- `prometheus`: Operational metric collection
+- `grafana`: Observability dashboard & exploration
+
+> **Privacy-first observability**: Traces record operational metadata such as agent name, workflow stage, model name, counts, timing, retries, and errors. User questions, prompts, model responses, provider names, retrieved documents, grounded answers, patient data, and secrets are intentionally excluded from telemetry.
+
+### Architecture
+
+```text
+User Request
+    |
+    v
+Streamlit Healthcare UI :8501
+    |
+    v
+Google ADK 3-Agent Workflow
+    |
+    +-- Search Planner Agent
+    |      +-- Gemini model call
+    |
+    +-- Healthcare Research Agent
+    |      +-- Gemini model call
+    |      +-- MCP Provider Search -> NPPES
+    |      +-- MCP PubMed Search -> PubMed
+    |      +-- MCP FHIR Search -> FHIR R4
+    |
+    +-- Evidence & Answer Agent
+           +-- Gemini model call
+           +-- Evidence Ranking
+           +-- Grounded Answer
+    |
+    v
+OpenTelemetry SDK
+    |
+    v
+OpenTelemetry Collector :4317 / :4318
+    |
+    +-- Tempo :3200 (traces)
+    +-- Prometheus :9090 (metrics)
+    +-- Grafana :3000 (Tempo & Prometheus datasources)
 ```
 
-Gemma on macOS:
+Run:
 
 ```bash
-./scripts/demo-docker.sh gemma
+./scripts/demo-docker.sh
+```
+or
+```bash
+./scripts/demo-docker.sh gemini
 ```
 
 Stop:
@@ -115,9 +159,11 @@ Stop:
 ./scripts/demo-docker-stop.sh
 ```
 
-On macOS, the healthcare application is containerized while Ollama remains native on the host. Docker reaches it through `host.docker.internal:11434`.
-
-This topology does not automatically make the application HIPAA compliant, PHI-safe, secure, private, or production-ready.
+Local endpoints:
+- Healthcare UI: `http://localhost:8501`
+- Grafana: `http://localhost:3000`
+- Prometheus: `http://localhost:9090`
+- Tempo: `http://localhost:3200`
 
 ## 7. Deploy and run on Google Kubernetes Engine
 

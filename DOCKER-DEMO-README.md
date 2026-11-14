@@ -1,195 +1,104 @@
-# Docker Demo Runtime
+# Docker Demo Runtime & Observability
 
 ## Purpose
 
-v1.0 packages the accepted healthcare agent application into a reproducible Docker runtime while preserving the existing local execution path.
+v1.3 delivers complete local agent observability for the Gemini-powered healthcare agent application using Docker Compose.
 
-Docker is an additional runtime option. It does not change the three-agent Google ADK architecture, MCP retrieval layer, evidence ranking, citations, or healthcare grounding rules.
+The local stack includes:
+- `healthcare-app` (Streamlit UI on port 8501)
+- `otel-collector` (OpenTelemetry Collector on ports 4317 / 4318)
+- `tempo` (Grafana Tempo distributed tracing backend on port 3200)
+- `prometheus` (Prometheus metrics scraper on port 9090)
+- `grafana` (Grafana visualization on port 3000)
+
+> **Privacy-first observability**: Traces record operational metadata such as agent name, workflow stage, model name, counts, timing, retries, and errors. User questions, prompts, model responses, provider names, retrieved documents, grounded answers, patient data, and secrets are intentionally excluded from telemetry.
 
 ## Architecture
 
 ```text
-Gemini
-
-Browser
-   |
-   v
-Docker healthcare-app :8501
-   |
-   v
-Google ADK
-   |
-   v
-Gemini API
-
-
-Gemma on macOS
-
-Browser
-   |
-   v
-Docker healthcare-app :8501
-   |
-   v
-Google ADK
-   |
-   v
-LiteLLM
-   |
-   v
-host.docker.internal:11434
-   |
-   v
-Native Ollama
-   |
-   v
-Gemma
+User Request
+    |
+    v
+Streamlit Healthcare UI :8501
+    |
+    v
+Google ADK 3-Agent Workflow
+    |
+    +-- Search Planner Agent
+    |      +-- Gemini model call
+    |
+    +-- Healthcare Research Agent
+    |      +-- Gemini model call
+    |      +-- MCP Provider Search -> NPPES
+    |      +-- MCP PubMed Search -> PubMed
+    |      +-- MCP FHIR Search -> FHIR R4
+    |
+    +-- Evidence & Answer Agent
+           +-- Gemini model call
+           +-- Evidence Ranking
+           +-- Grounded Answer
+    |
+    v
+OpenTelemetry SDK
+    |
+    v
+OpenTelemetry Collector :4317 / :4318
+    |
+    +-- Tempo :3200 (traces)
+    +-- Prometheus :9090 (metrics)
+    +-- Grafana :3000 (Tempo + Prometheus datasources)
 ```
 
-## Prerequisites
+## Quick Start
 
-For both paths:
+### 1. Configure Gemini in `.env`
 
-- Docker Desktop is installed and running.
-- `.env` exists locally.
-- port `8501` is available, or `DEMO_PORT` is set to another host port.
+Ensure your `.env` contains:
+```bash
+GEMINI_API_KEY=<your-api-key>
+GEMINI_MODEL=gemini-3.7-flash
+MODEL_PROVIDER=gemini
+```
 
-For Gemini:
+### 2. Start the Full Stack
 
-- `GEMINI_API_KEY` is configured locally.
-- `GEMINI_MODEL` is configured.
-
-For Gemma on macOS:
-
-- Ollama is running natively on macOS.
-- the configured `GEMMA_MODEL` is installed.
-- Ollama is reachable at `http://localhost:11434`.
-
-## Run
-
-Gemini:
-
+```bash
+./scripts/demo-docker.sh
+```
+or
 ```bash
 ./scripts/demo-docker.sh gemini
 ```
 
-Gemma:
-
-```bash
-./scripts/demo-docker.sh gemma
-```
-
-Open:
-
+All 5 services build, launch, and await health checks before announcing:
 ```text
-http://localhost:8501
+============================================================
+ Gemini Healthcare Agentic Platform READY
+============================================================
+ Healthcare UI: http://localhost:8501
+ Grafana:       http://localhost:3000
+ Prometheus:    http://localhost:9090
+ Tempo:         http://localhost:3200
+
+ Model: GEMINI
+ Gemini model: <configured model>
+
+ Logs:
+ docker compose logs -f
+
+ Stop:
+ ./scripts/demo-docker-stop.sh
+============================================================
 ```
 
-Stop:
+### 3. Trace Exploration
+
+1. Submit a query in the Streamlit UI at `http://localhost:8501`.
+2. Observe the displayed `OpenTelemetry Trace ID`.
+3. Open Grafana at `http://localhost:3000` and view the pre-configured **Gemini Healthcare Agentic Platform — Local Agent Observability** dashboard or explore traces in Tempo using that Trace ID.
+
+### 4. Stop the Stack
 
 ```bash
 ./scripts/demo-docker-stop.sh
 ```
-
-## Validation
-
-Validate Compose without printing expanded environment values:
-
-```bash
-docker compose config --quiet
-```
-
-Check container health:
-
-```bash
-docker compose ps
-curl -fsS http://localhost:8501/_stcore/health && echo
-```
-
-Run the deterministic suite:
-
-```bash
-python -m pytest -q
-git diff --check
-```
-
-v1.0 deterministic checkpoint:
-
-```text
-85 passed, 5 skipped, 1 dependency warning
-```
-
-The known OpenTelemetry deprecation warning is non-blocking.
-
-## Secrets
-
-`.env` is excluded from the Docker build context by `.dockerignore`.
-
-Do not commit `.env`.
-
-Prefer:
-
-```bash
-docker compose config --quiet
-```
-
-instead of plain `docker compose config`, because the non-quiet command can print expanded environment values.
-
-## Existing Local Runtime
-
-The existing local runtime remains supported:
-
-```bash
-./scripts/demo-local.sh gemini
-./scripts/demo-local.sh gemma
-./scripts/demo-stop.sh
-```
-
-## Healthcare Safety Boundary
-
-Containerization does not change source authority:
-
-```text
-NPPES -> provider registry identity / NPI / taxonomy / reported location
-PubMed -> general biomedical evidence
-FHIR  -> interoperability evidence
-```
-
-Docker does not establish provider quality, active licensure, board certification, good standing, service availability, clinical validity, HIPAA compliance, or PHI safety.
-
-> **No evidence -> no claim.**
-
-## Common Failures
-
-### Docker credential helper not found
-
-If Docker Desktop is installed but Docker reports `docker-credential-desktop` is missing, verify that Docker Desktop's CLI directory is available on `PATH`.
-
-### Ollama port already in use
-
-```text
-listen tcp 127.0.0.1:11434: bind: address already in use
-```
-
-This usually means Ollama is already running. Confirm with:
-
-```bash
-curl -fsS http://localhost:11434/api/tags
-```
-
-### Gemma model missing
-
-```bash
-ollama list
-ollama pull <model-name>
-```
-
-### Container cannot reach host Ollama
-
-```bash
-docker run --rm curlimages/curl:latest   -s http://host.docker.internal:11434/api/tags
-```
-
-## Extension Points
-
-Future milestones can add evaluation runners, Kubernetes/GKE deployment, production model-serving topology, OpenTelemetry collectors, and security controls without redesigning the core three-agent workflow.
