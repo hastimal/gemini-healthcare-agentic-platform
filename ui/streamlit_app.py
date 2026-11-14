@@ -195,15 +195,21 @@ def _render_agent_workflow(
     st.subheader("Agent Workflow")
 
     st.caption(
-        "See how the question moves through planning, retrieval, "
-        "evidence ranking, and grounded synthesis."
+        "Google ADK 3-Agent Workflow: planning, MCP retrieval, evidence ranking, and grounded synthesis."
     )
+
+    with st.container(border=True):
+        st.markdown(
+            "**Google ADK 3-Agent Architecture:** "
+            "`Search Planner Agent` ➔ `Healthcare Research Agent` ➔ `Evidence & Answer Agent` "
+            "*(Evidence Ranking is an internal processing stage)*"
+        )
 
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         with st.container(border=True):
-            st.markdown("### ① Search Planner")
+            st.markdown("### ① Search Planner Agent")
 
             st.success("Complete")
 
@@ -213,12 +219,18 @@ def _render_agent_workflow(
             )
 
             st.caption(
-                "Creates focused searches from the healthcare question."
+                "Plans searches and query fanout from the healthcare question."
             )
+
+            query_texts = _query_texts(generated_queries)
+            if query_texts:
+                st.markdown("**Query Fan-Out**")
+                for index, q in enumerate(query_texts, start=1):
+                    st.markdown(f"`↳ {index}` {q}")
 
     with col2:
         with st.container(border=True):
-            st.markdown("### ② Healthcare Research")
+            st.markdown("### ② Healthcare Research Agent")
 
             st.success("Complete")
 
@@ -228,14 +240,14 @@ def _render_agent_workflow(
             )
 
             st.caption(
-                "Uses MCP-backed retrieval for healthcare evidence."
+                "Executes MCP-backed retrieval across NPPES, PubMed, and FHIR R4."
             )
 
     with col3:
         with st.container(border=True):
             st.markdown("### ③ Evidence Ranking")
 
-            st.success("Complete")
+            st.info("Stage")
 
             st.metric(
                 "Selected",
@@ -243,12 +255,12 @@ def _render_agent_workflow(
             )
 
             st.caption(
-                f"{unique_count} unique sources evaluated before selection."
+                f"{unique_count} unique sources scored/selected (internal stage, not an agent)."
             )
 
     with col4:
         with st.container(border=True):
-            st.markdown("### ④ Grounded Answer")
+            st.markdown("### ④ Evidence & Answer Agent")
 
             st.success("Complete")
 
@@ -258,7 +270,7 @@ def _render_agent_workflow(
             )
 
             st.caption(
-                "Synthesizes the answer from selected evidence."
+                "Produces grounded answer with citations and explicit limitations."
             )
 
     with st.expander("See workflow details"):
@@ -825,6 +837,136 @@ def _render_results(
                 answer_output
             )
 
+    _render_agentops_section(result=result)
+
+
+def _render_agentops_section(result: dict[str, Any] | None = None) -> None:
+    st.divider()
+
+    st.subheader("#5 — AgentOps / Observability")
+
+    st.caption(
+        "Local agent telemetry pipeline powered by OpenTelemetry, Tempo, Prometheus, and Grafana."
+    )
+
+    with st.container(border=True):
+        st.markdown("### Google ADK 3-Agent Workflow")
+
+        st.markdown(
+            """
+```text
+Google ADK Agent Workflow
+
+Search Planner Agent (plan & query fanout)
+        ↓
+Healthcare Research Agent (MCP retrieval: NPPES, PubMed, FHIR R4)
+        ↓
+Evidence & Answer Agent (evidence ranking & grounded answer)
+```
+            """
+        )
+
+        st.caption(
+            "Evidence Ranking is an internal processing stage inside Evidence & Answer, not a fourth agent."
+        )
+
+    trace_id = (result.get("trace_id") if result else None)
+
+    col_trace, col_pipeline = st.columns(2)
+
+    with col_trace:
+        with st.container(border=True):
+            st.markdown("### Current Trace")
+            if trace_id:
+                st.success(f"**OpenTelemetry Trace ID:** `{trace_id}`")
+                st.caption("Exact trace recorded in Tempo and discoverable in Grafana.")
+            else:
+                st.info("Run a healthcare research query above to generate and inspect a live trace.")
+
+    with col_pipeline:
+        with st.container(border=True):
+            st.markdown("### Telemetry Flow")
+            st.markdown(
+                """
+```text
+Google ADK ➔ OpenTelemetry ➔ OTel Collector (:4317/:4318)
+                               ├── Tempo (:3200) -> traces
+                               ├── Prometheus (:9090) -> metrics
+                               └── Grafana (:3000) -> dashboards
+```
+                """
+            )
+
+    st.markdown(
+        "> **Google ADK UI** provides local agent debugging and event inspection. "
+        "**Grafana, Tempo, and Prometheus** provide privacy-safe operational observability "
+        "through the project's sanitized OpenTelemetry pipeline."
+    )
+
+    dev_col, obs_col = st.columns([1, 2])
+
+    with dev_col:
+        with st.container(border=True):
+            st.markdown("#### Agent Development")
+            st.caption("Local debugging, session state, and step inspection.")
+            st.link_button(
+                "🛠️ Open Google ADK UI",
+                url="http://localhost:8080",
+                use_container_width=True,
+                help="Google ADK Web UI / Agent Playground",
+            )
+
+    with obs_col:
+        with st.container(border=True):
+            st.markdown("#### AgentOps / Observability")
+            st.caption("Privacy-safe operational metrics, dashboards, and distributed traces.")
+            obs_row1_col1, obs_row1_col2 = st.columns(2)
+            with obs_row1_col1:
+                st.link_button(
+                    "📊 Grafana Dashboard",
+                    url="http://localhost:3000/d/gemini-healthcare-agentic-observability",
+                    use_container_width=True,
+                    help="Pre-configured local agent observability dashboard",
+                )
+            with obs_row1_col2:
+                st.link_button(
+                    "🔬 Explore Traces & Metrics",
+                    url="http://localhost:3000/explore",
+                    use_container_width=True,
+                    help="Grafana Explore view for Tempo traces and Prometheus metrics",
+                )
+
+            obs_row2_col1, obs_row2_col2 = st.columns(2)
+            with obs_row2_col1:
+                st.link_button(
+                    "📈 Prometheus",
+                    url="http://localhost:9090",
+                    use_container_width=True,
+                    help="Prometheus operational metrics scraper",
+                )
+            with obs_row2_col2:
+                st.link_button(
+                    "🔍 Tempo Health",
+                    url="http://localhost:3200/ready",
+                    use_container_width=True,
+                    help="Distributed trace storage health endpoint (use Grafana Explore to inspect traces)",
+                )
+
+    with st.expander("Collector Details & Privacy Boundaries"):
+        st.markdown(
+            """
+**OpenTelemetry Collector Ports:**
+- `4318` (OTLP HTTP) — primary application telemetry ingest
+- `4317` (OTLP gRPC) — secondary gRPC ingest
+- `8888` / `8889` — collector telemetry & pipeline Prometheus scrape endpoints
+
+**Privacy-Safe Observability:**
+- User healthcare questions, prompts, system instructions, and grounded answers are **never exported**.
+- Model responses, provider names, retrieved documents, FHIR patient data, and API keys are **never exported**.
+- Only operational metadata (agent lifecycle, model name, tokens, duration, status, result counts) is exported through `PrivacySafeSpanExporter`.
+            """
+        )
+
 
 def main() -> None:
     st.set_page_config(
@@ -1014,6 +1156,8 @@ def main() -> None:
             result=result,
             provider=provider,
         )
+    else:
+        _render_agentops_section(result=None)
 
 
 if __name__ == "__main__":

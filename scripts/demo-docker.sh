@@ -72,19 +72,36 @@ echo
 echo "============================================================"
 echo " Gemini Healthcare Agentic Platform READY"
 echo "============================================================"
-echo " Healthcare UI: http://localhost:${PORT}"
-echo " Grafana:       http://localhost:3000"
-echo " Prometheus:    http://localhost:9090"
-echo " Tempo:         http://localhost:3200"
 echo
-echo " Model: GEMINI"
-echo " Gemini model: ${GEMINI_MODEL}"
+echo "Google ADK Agents:"
+echo "  1. Search Planner Agent"
+echo "  2. Healthcare Research Agent"
+echo "  3. Evidence & Answer Agent"
 echo
-echo " Logs:"
-echo " docker compose logs -f"
+echo "Model:"
+echo "  Gemini: ${GEMINI_MODEL}"
 echo
-echo " Stop:"
-echo " ./scripts/demo-docker-stop.sh"
+echo "Application:"
+echo "  Healthcare UI: http://localhost:${PORT}"
+echo
+echo "Agent Development:"
+echo "  Google ADK UI:     http://localhost:8080"
+echo
+echo "AgentOps / Observability:"
+echo "  Grafana Dashboard: http://localhost:3000/d/gemini-healthcare-agentic-observability"
+echo "  Grafana Explore:   http://localhost:3000/explore"
+echo "  Prometheus:        http://localhost:9090"
+echo "  Tempo:             http://localhost:3200"
+echo
+echo "Telemetry:"
+echo "  OTel HTTP:     http://localhost:4318"
+echo "  OTel gRPC:     localhost:4317"
+echo
+echo "Logs:"
+echo "  docker compose logs -f"
+echo
+echo "Stop:"
+echo "  ./scripts/demo-docker-stop.sh"
 echo "============================================================"
 
 if command -v open >/dev/null 2>&1; then

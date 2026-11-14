@@ -91,11 +91,15 @@ All 5 services build, launch, and await health checks before announcing:
 ============================================================
 ```
 
-### 3. Trace Exploration
+### 3. Trace Exploration & Observability
 
 1. Submit a query in the Streamlit UI at `http://localhost:8501`.
 2. Observe the displayed `OpenTelemetry Trace ID`.
-3. Open Grafana at `http://localhost:3000` and view the pre-configured **Gemini Healthcare Agentic Platform — Local Agent Observability** dashboard or explore traces in Tempo using that Trace ID.
+3. Open Grafana at `http://localhost:3000`:
+   - Pre-configured dashboard: `http://localhost:3000/d/gemini-healthcare-agentic-observability`
+   - Grafana Explore (Tempo traces & Prometheus metrics): `http://localhost:3000/explore`
+
+> **Security Note:** `GF_AUTH_ANONYMOUS_ORG_ROLE=Editor` is enabled only for the localhost developer demo so Grafana Explore works without login. Do not use anonymous Editor access when Grafana is publicly exposed or deployed to a shared environment.
 
 ### 4. Stop the Stack
 

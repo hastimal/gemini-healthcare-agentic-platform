@@ -16,12 +16,13 @@ services:
       OTEL_SERVICE_NAME: "gemini-healthcare-agentic-platform"
     ports:
       - "${DEMO_PORT:-8501}:8501"
+      - "8080:8080" # Google ADK Web UI
     depends_on:
       otel-collector:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
+      test: ["CMD", "sh", "-c", "curl -fsS http://localhost:8501/_stcore/health && curl -fsS http://localhost:8080/"]
       interval: 10s
       timeout: 5s
       start_period: 20s
@@ -90,8 +91,9 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Editor
       - GF_AUTH_BASIC_ENABLED=true
+      - GF_EXPLORE_ENABLED=true
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana-data:/var/lib/grafana

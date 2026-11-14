@@ -72,7 +72,9 @@ The entire observability stack runs locally via Docker Compose:
 - **OpenTelemetry Collector** (`:4317` gRPC, `:4318` HTTP): Receives OTLP telemetry from `healthcare-app`, batches traces, exports to Tempo, and provides scrape targets for Prometheus.
 - **Grafana Tempo** (`:3200`): Local trace store retaining traces in local volumes.
 - **Prometheus** (`:9090`): Collects collector telemetry and operational metrics.
-- **Grafana** (`:3000`): Pre-provisioned with Tempo and Prometheus datasources and the pre-built dashboard: **Gemini Healthcare Agentic Platform — Local Agent Observability**. Anonymous access is enabled for seamless local inspection.
+- **Grafana** (`:3000`): Pre-provisioned with Tempo and Prometheus datasources, the pre-built dashboard **Gemini Healthcare Agentic Platform — Local Agent Observability**, and **Grafana Explore** (`/explore`) for interactive trace and metric queries.
+
+> **Security Note:** `GF_AUTH_ANONYMOUS_ORG_ROLE=Editor` is enabled only for the localhost developer demo so Grafana Explore works without login. Do not use anonymous Editor access when Grafana is publicly exposed or deployed to a shared environment.
 
 ### Running the Stack
 
